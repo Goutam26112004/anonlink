@@ -9,7 +9,7 @@ if (-not (Test-Path $keyPath)) {
     exit 1
 }
 
-$cmd = "cd $dir; git fetch origin main; git reset --hard origin/main; docker-compose down 2>&1; docker-compose up --build -d 2>&1; docker image prune -f 2>&1"
+$cmd = "cd $dir; git fetch origin main; git reset --hard origin/main; sudo docker-compose down 2>&1; sudo docker-compose up --build -d 2>&1; sudo docker image prune -f 2>&1"
 
 $result = ssh -i $keyPath -o StrictHostKeyChecking=no -o ConnectTimeout=15 $host $cmd 2>&1
 $ok = $LASTEXITCODE -eq 0
