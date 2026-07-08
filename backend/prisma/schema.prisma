@@ -1,0 +1,421 @@
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+generator client {
+  provider      = "prisma-client-js"
+  binaryTargets = ["native", "linux-musl-openssl-3.0.x"]
+}
+
+enum RegistrationType {
+  GUEST
+  EMAIL
+  OAUTH
+}
+
+enum AgeRange {
+  UNDER_18
+  AGE_18_24
+  AGE_25_34
+  AGE_35_44
+  AGE_45_PLUS
+}
+
+enum Gender {
+  MALE
+  FEMALE
+  PREFER_NOT_TO_SAY
+}
+
+enum GenderPreference {
+  MALE
+  FEMALE
+  NO_PREFERENCE
+}
+
+enum UserType {
+  GUEST
+  FREE
+  PAID
+}
+
+enum SubscriptionPlanType {
+  DAILY
+  WEEKLY
+  MONTHLY
+}
+
+enum SubscriptionStatus {
+  ACTIVE
+  EXPIRED
+  CANCELLED
+}
+
+model User {
+  id                 String            @id @default(uuid())
+  email              String?           @unique
+  phone              String?           @unique
+  passwordHash       String?           @map("password_hash")
+  registrationType   RegistrationType  @default(EMAIL) @map("registration_type")
+  userType           UserType          @default(FREE) @map("user_type")
+  emailVerified      Boolean           @default(false) @map("email_verified")
+  phoneVerified      Boolean           @default(false) @map("phone_verified")
+  googleId           String?           @unique @map("google_id")
+  authProvider       String?           @default("email") @map("auth_provider")
+  linkedProviders    String[]          @default([]) @map("linked_providers")
+  avatarUrl          String?           @map("avatar_url")
+  genderPreference   GenderPreference  @default(NO_PREFERENCE) @map("gender_preference")
+  twoFactorSecret    String?           @map("two_factor_secret")
+  twoFactorEnabled   Boolean           @default(false) @map("two_factor_enabled")
+  isShadowBanned     Boolean           @default(false) @map("is_shadow_banned")
+  roleId             String            @map("role_id")
+  role               Role              @relation(fields: [roleId], references: [id])
+  reputationScore    Int               @default(100) @map("reputation_score")
+  experiencePoints   Int               @default(0) @map("experience_points")
+  level              Int               @default(1)
+  totalChats         Int               @default(0) @map("total_chats")
+  voiceChats         Int               @default(0) @map("voice_chats")
+  videoChats         Int               @default(0) @map("video_chats")
+  createdAt          DateTime          @default(now()) @map("created_at")
+  updatedAt          DateTime          @updatedAt @map("updated_at")
+
+  settings           UserSettings?
+  onboarding         UserOnboarding?
+  guestSessions      GuestSession[]
+  devices            Device[]
+  activeSessions     ActiveSession[]
+  refreshTokens      RefreshToken[]
+  auditLogs          AuditLog[]
+  notifications      Notification[]
+  interests          Interest[]        @relation("UserInterests")
+  achievements       UserAchievement[]
+  badges             UserBadge[]
+  subscriptions      UserSubscription[]
+  subscriptionHistory SubscriptionHistory[]
+  uploadedMedia      TemporaryMedia[]
+
+  reportsMade        Report[]          @relation("Reporter")
+  reportsReceived    Report[]          @relation("Reported")
+  blocksMade         Block[]           @relation("Blocker")
+  blocksReceived     Block[]           @relation("Blocked")
+  appeals            Appeal[]
+  feedbacks          Feedback[]
+
+  @@index([email])
+  @@index([phone])
+  @@index([userType])
+  @@map("users")
+}
+
+model Role {
+  id          String       @id @default(uuid())
+  name        String       @unique
+  permissions Permission[] @relation("RolePermissions")
+  users       User[]
+
+  @@map("roles")
+}
+
+model Permission {
+  id    String @id @default(uuid())
+  name  String @unique
+  roles Role[] @relation("RolePermissions")
+
+  @@map("permissions")
+}
+
+// â”€â”€â”€ Onboarding â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+
+model UserOnboarding {
+  id          String    @id @default(uuid())
+  userId      String    @unique @map("user_id")
+  user        User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+  ageRange    AgeRange  @map("age_range")
+  gender      Gender
+  completedAt DateTime  @default(now()) @map("completed_at")
+
+  @@map("user_onboarding")
+}
+
+// â”€â”€â”€ Subscriptions â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+
+model SubscriptionPlan {
+  id              String               @id @default(uuid())
+  type            SubscriptionPlanType @unique
+  priceInr        Decimal              @map("price_inr") @db.Decimal(10, 2)
+  validityDays    Int                  @map("validity_days")
+  isActive        Boolean              @default(true) @map("is_active")
+  isVoiceEnabled  Boolean              @default(true) @map("is_voice_enabled")
+  isVideoEnabled  Boolean              @default(true) @map("is_video_enabled")
+  createdAt       DateTime             @default(now()) @map("created_at")
+  updatedAt       DateTime             @updatedAt @map("updated_at")
+
+  subscriptions   UserSubscription[]
+  history         SubscriptionHistory[]
+
+  @@map("subscription_plans")
+}
+
+model UserSubscription {
+  id               String             @id @default(uuid())
+  userId           String             @map("user_id")
+  user             User               @relation(fields: [userId], references: [id], onDelete: Cascade)
+  planId           String             @map("plan_id")
+  plan             SubscriptionPlan   @relation(fields: [planId], references: [id])
+  status           SubscriptionStatus @default(ACTIVE)
+  purchasedAt      DateTime           @default(now()) @map("purchased_at")
+  expiresAt        DateTime           @map("expires_at")
+  renewalEnabled   Boolean            @default(false) @map("renewal_enabled")
+  transactionRef   String?            @map("transaction_ref")
+  grantedByAdmin   Boolean            @default(false) @map("granted_by_admin")
+  createdAt        DateTime           @default(now()) @map("created_at")
+  updatedAt        DateTime           @updatedAt @map("updated_at")
+
+  @@index([userId, status])
+  @@index([expiresAt])
+  @@map("user_subscriptions")
+}
+
+model SubscriptionHistory {
+  id             String               @id @default(uuid())
+  userId         String               @map("user_id")
+  user           User                 @relation(fields: [userId], references: [id], onDelete: Cascade)
+  planId         String               @map("plan_id")
+  plan           SubscriptionPlan     @relation(fields: [planId], references: [id])
+  status         SubscriptionStatus
+  purchasedAt    DateTime             @map("purchased_at")
+  expiredAt      DateTime?            @map("expired_at")
+  transactionRef String?              @map("transaction_ref")
+  createdAt      DateTime             @default(now()) @map("created_at")
+
+  @@index([userId])
+  @@map("subscription_history")
+}
+
+// â”€â”€â”€ Temporary Media â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+
+model TemporaryMedia {
+  id             String    @id @default(uuid())
+  uploaderUserId String    @map("uploader_user_id")
+  uploader       User      @relation(fields: [uploaderUserId], references: [id], onDelete: Cascade)
+  roomId         String    @map("room_id")
+  storagePath    String    @map("storage_path")
+  mimeType       String    @map("mime_type")
+  sizeBytes      Int       @map("size_bytes")
+  expiresAt      DateTime  @map("expires_at")
+  isDeleted      Boolean   @default(false) @map("is_deleted")
+  createdAt      DateTime  @default(now()) @map("created_at")
+
+  @@index([expiresAt, isDeleted])
+  @@index([roomId])
+  @@map("temporary_media")
+}
+
+// â”€â”€â”€ Sessions â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+
+model GuestSession {
+  id           String    @id @default(uuid())
+  userId       String    @map("user_id")
+  user         User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+  sessionToken String    @unique @map("session_token")
+  expiresAt    DateTime  @map("expires_at")
+  ipAddress    String?   @map("ip_address")
+  userAgent    String?   @map("user_agent")
+  createdAt    DateTime  @default(now()) @map("created_at")
+
+  @@index([sessionToken])
+  @@map("guest_sessions")
+}
+
+model Device {
+  id        String   @id @default(uuid())
+  userId    String   @map("user_id")
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  pushToken String   @map("push_token")
+  platform  String
+  lastSeen  DateTime @default(now()) @map("last_seen")
+  createdAt DateTime @default(now()) @map("created_at")
+
+  @@map("devices")
+}
+
+model ActiveSession {
+  id          String   @id @default(uuid())
+  userId      String   @map("user_id")
+  user        User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  socketId    String   @unique @map("socket_id")
+  serverIp    String   @map("server_ip")
+  connectedAt DateTime @default(now()) @map("connected_at")
+  deviceHash  String   @map("device_hash")
+
+  @@index([socketId])
+  @@map("active_sessions")
+}
+
+model UserSettings {
+  userId              String   @id @map("user_id")
+  user                User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  theme               String   @default("dark")
+  languagePref        String   @default("en") @map("language_pref")
+  soundEnabled        Boolean  @default(true) @map("sound_enabled")
+  defaultVideoEnabled Boolean  @default(false) @map("default_video_enabled")
+  discoverable        Boolean  @default(true)
+
+  @@map("user_settings")
+}
+
+model Interest {
+  id    String @id @default(uuid())
+  name  String @unique
+  users User[] @relation("UserInterests")
+
+  @@map("interests")
+}
+
+model Notification {
+  id        String   @id @default(uuid())
+  userId    String   @map("user_id")
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  title     String
+  message   String
+  isRead    Boolean  @default(false) @map("is_read")
+  type      String
+  createdAt DateTime @default(now()) @map("created_at")
+
+  @@map("notifications")
+}
+
+model AuditLog {
+  id          String   @id @default(uuid())
+  userId      String?  @map("user_id")
+  user        User?    @relation(fields: [userId], references: [id], onDelete: SetNull)
+  action      String
+  description String
+  ipAddress   String?  @map("ip_address")
+  userAgent   String?  @map("user_agent")
+  createdAt   DateTime @default(now()) @map("created_at")
+
+  @@map("audit_logs")
+}
+
+model RefreshToken {
+  id         String   @id @default(uuid())
+  userId     String   @map("user_id")
+  user       User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  token      String   @unique
+  deviceHash String   @map("device_hash")
+  expiresAt  DateTime @map("expires_at")
+  isRevoked  Boolean  @default(false) @map("is_revoked")
+  createdAt  DateTime @default(now()) @map("created_at")
+
+  @@index([token])
+  @@map("refresh_tokens")
+}
+
+model Achievement {
+  id          String            @id @default(uuid())
+  title       String            @unique
+  description String
+  points      Int               @default(10)
+  users       UserAchievement[]
+
+  @@map("achievements")
+}
+
+model UserAchievement {
+  id            String      @id @default(uuid())
+  userId        String      @map("user_id")
+  user          User        @relation(fields: [userId], references: [id], onDelete: Cascade)
+  achievementId String      @map("achievement_id")
+  achievement   Achievement @relation(fields: [achievementId], references: [id], onDelete: Cascade)
+  unlockedAt    DateTime    @default(now()) @map("unlocked_at")
+
+  @@unique([userId, achievementId])
+  @@map("user_achievements")
+}
+
+model Badge {
+  id          String      @id @default(uuid())
+  name        String      @unique
+  description String
+  iconUrl     String      @map("icon_url")
+  users       UserBadge[]
+
+  @@map("badges")
+}
+
+model UserBadge {
+  id        String   @id @default(uuid())
+  userId    String   @map("user_id")
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  badgeId   String   @map("badge_id")
+  badge     Badge    @relation(fields: [badgeId], references: [id], onDelete: Cascade)
+  awardedAt DateTime @default(now()) @map("awarded_at")
+
+  @@unique([userId, badgeId])
+  @@map("user_badges")
+}
+
+model Report {
+  id         String   @id @default(uuid())
+  reporterId String   @map("reporter_id")
+  reporter   User     @relation("Reporter", fields: [reporterId], references: [id], onDelete: Cascade)
+  reportedId String   @map("reported_id")
+  reported   User     @relation("Reported", fields: [reportedId], references: [id], onDelete: Cascade)
+  reason     String
+  roomId     String   @map("room_id")
+  status     String   @default("PENDING")
+  createdAt  DateTime @default(now()) @map("created_at")
+
+  @@map("reports")
+}
+
+model Block {
+  id        String   @id @default(uuid())
+  blockerId String   @map("blocker_id")
+  blocker   User     @relation("Blocker", fields: [blockerId], references: [id], onDelete: Cascade)
+  blockedId String   @map("blocked_id")
+  blocked   User     @relation("Blocked", fields: [blockedId], references: [id], onDelete: Cascade)
+  createdAt DateTime @default(now()) @map("created_at")
+
+  @@unique([blockerId, blockedId])
+  @@map("blocks")
+}
+
+model Friend {
+  id         String  @id @default(uuid())
+  userId1    String  @map("user_id_1")
+  userId2    String  @map("user_id_2")
+  status     String  @default("PENDING")
+  isFavorite Boolean @default(false) @map("is_favorite")
+  note       String?
+  createdAt  DateTime @default(now()) @map("created_at")
+
+  @@map("friends")
+}
+
+model Appeal {
+  id          String    @id @default(uuid())
+  userId      String    @map("user_id")
+  user        User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+  reason      String
+  status      String    @default("PENDING")
+  createdAt   DateTime  @default(now()) @map("created_at")
+  resolvedAt  DateTime? @map("resolved_at")
+  decisionLog String?   @map("decision_log")
+
+  @@map("appeals")
+}
+
+model Feedback {
+  id        String   @id @default(uuid())
+  userId    String?  @map("user_id")
+  user      User?    @relation(fields: [userId], references: [id], onDelete: SetNull)
+  category  String
+  message   String
+  status    String   @default("OPEN")
+  createdAt DateTime @default(now()) @map("created_at")
+
+  @@map("feedbacks")
+}

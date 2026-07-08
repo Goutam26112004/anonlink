@@ -1,0 +1,43 @@
+name: CI/CD Deployment Pipeline
+
+on:
+  push:
+    branches:
+      - main
+  pull_request:
+    branches:
+      - main
+
+jobs:
+  build-and-test:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout Code
+        uses: actions/checkout@v4
+
+      - name: Setup NodeJS Environment
+        uses: actions/setup-node@v4
+        with:
+          node-size: 20
+          cache: 'npm'
+
+      - name: Install Monorepo Dependencies
+        run: npm ci
+
+      - name: Generate Prisma Client Types
+        run: npm run prisma:generate --workspace=backend || true
+
+      - name: Run Backend Compilation
+        run: npm run build --workspace=backend
+
+      - name: Run Frontend NextJS Compilation
+        run: npm run build --workspace=frontend
+
+      - name: Run Verification Test Suites
+        run: |
+          node tests/verify.js
+          node tests/matchmaker.test.js
+          node tests/admin.test.js
+          node tests/gamification.test.js
+          node tests/security.test.js
