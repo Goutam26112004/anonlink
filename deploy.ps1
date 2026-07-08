@@ -1,0 +1,23 @@
+$keyPath = "$env:USERPROFILE\.ssh\anonlink.key"
+$host = "ubuntu@132.226.190.112"
+$dir = "/home/ubuntu/anon-chat-platform"
+
+Write-Host "==> Deploying to anonlink.online ..." -ForegroundColor Cyan
+
+if (-not (Test-Path $keyPath)) {
+    Write-Host "ERROR: SSH key not found at $keyPath" -ForegroundColor Red
+    exit 1
+}
+
+$cmd = "cd $dir; git fetch origin main; git reset --hard origin/main; docker-compose down 2>&1; docker-compose up --build -d 2>&1; docker image prune -f 2>&1"
+
+$result = ssh -i $keyPath -o StrictHostKeyChecking=no -o ConnectTimeout=15 $host $cmd 2>&1
+$ok = $LASTEXITCODE -eq 0
+
+$result | ForEach-Object { Write-Host $_ }
+
+if (-not $ok) {
+    Write-Host "FAILED (exit code: $LASTEXITCODE)" -ForegroundColor Red
+} else {
+    Write-Host "SUCCESS! https://anonlink.online" -ForegroundColor Green
+}

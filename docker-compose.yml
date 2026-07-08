@@ -46,6 +46,9 @@ services:
       GOOGLE_CLIENT_ID: ${GOOGLE_CLIENT_ID}
       GOOGLE_CLIENT_SECRET: ${GOOGLE_CLIENT_SECRET}
       GOOGLE_CALLBACK_URL: ${GOOGLE_CALLBACK_URL}
+      RECAPTCHA_SECRET_KEY: ${RECAPTCHA_SECRET_KEY}
+      FRONTEND_URL: https://${DOMAIN_NAME:-localhost}
+      REFRESH_TOKEN_SECRET: ${REFRESH_TOKEN_SECRET}
     depends_on:
       db:
         condition: service_healthy
