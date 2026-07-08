@@ -4,9 +4,6 @@ on:
   push:
     branches:
       - main
-  pull_request:
-    branches:
-      - main
 
 jobs:
   build-and-test:
@@ -41,3 +38,21 @@ jobs:
           node tests/admin.test.js
           node tests/gamification.test.js
           node tests/security.test.js
+
+  deploy:
+    needs: build-and-test
+    runs-on: ubuntu-latest
+    if: github.ref == 'refs/heads/main' && github.event_name == 'push'
+
+    steps:
+      - name: Deploy via SSH
+        uses: appleboy/ssh-action@v1.2.2
+        with:
+          host: 132.226.190.112
+          username: ubuntu
+          key: ${{ secrets.SSH_PRIVATE_KEY }}
+          script: |
+            cd /home/ubuntu/anon-chat-platform
+            git pull origin main
+            sudo docker-compose up --build -d
+            sudo docker image prune -f
