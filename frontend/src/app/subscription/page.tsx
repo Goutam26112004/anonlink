@@ -265,7 +265,7 @@ export default function SubscriptionPage() {
                 <div key={h.id} className="p-4 flex items-center justify-between">
                   <div>
                     <p className="font-semibold">{PLAN_META[h.plan.type]?.label || h.plan.type} Plan</p>
-                    <p className={`text-xs ${sub}`}>{new Date(h.purchasedAt).toLocaleDateString()} → {h.expiredAt ? new Date(h.expiredAt).toLocaleDateString() : "Active"}</p>
+                    <p className={`text-xs ${sub}`}>{new Date(h.purchasedAt).toLocaleDateString()} → {new Date(h.expiresAt).toLocaleDateString()}</p>
                   </div>
                   <span className={`text-xs font-bold px-3 py-1 rounded-full ${
                     h.status === "ACTIVE" ? "bg-emerald-500/20 text-emerald-400" :

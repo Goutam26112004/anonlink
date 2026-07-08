@@ -19,6 +19,7 @@ import gamificationRouter from './routes/gamification.js';
 import onboardingRouter from './routes/onboarding.js';
 import subscriptionsRouter from './routes/subscriptions.js';
 import mediaRouter from './routes/media.js';
+import messagesRouter from './routes/messages.js';
 import { startScheduler } from './services/scheduler.js';
 
 dotenv.config();
@@ -45,6 +46,7 @@ app.use('/api/v1/gamification', gamificationRouter);
 app.use('/api/v1/onboarding', onboardingRouter);
 app.use('/api/v1/subscriptions', subscriptionsRouter);
 app.use('/api/v1/media', mediaRouter);
+app.use('/api/v1/messages', messagesRouter);
 
 app.get('/health', (req, res) => {
   res.json({ status: 'ok', timestamp: new Date().toISOString() });

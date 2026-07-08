@@ -8,6 +8,27 @@ generator client {
   binaryTargets = ["native", "linux-musl-openssl-3.0.x"]
 }
 
+enum FriendRequestStatus {
+  PENDING
+  ACCEPTED
+  REJECTED
+  CANCELLED
+}
+
+enum MessageStatus {
+  SENDING
+  SENT
+  DELIVERED
+  SEEN
+}
+
+enum UserStatus {
+  ONLINE
+  OFFLINE
+  AWAY
+  BUSY
+}
+
 enum RegistrationType {
   GUEST
   EMAIL
@@ -65,6 +86,10 @@ model User {
   authProvider       String?           @default("email") @map("auth_provider")
   linkedProviders    String[]          @default([]) @map("linked_providers")
   avatarUrl          String?           @map("avatar_url")
+  displayName        String?           @map("display_name")
+  bio                String?           @default("")
+  status             UserStatus        @default(OFFLINE) @map("status")
+  lastSeen           DateTime          @default(now()) @map("last_seen")
   genderPreference   GenderPreference  @default(NO_PREFERENCE) @map("gender_preference")
   twoFactorSecret    String?           @map("two_factor_secret")
   twoFactorEnabled   Boolean           @default(false) @map("two_factor_enabled")
@@ -102,9 +127,18 @@ model User {
   appeals            Appeal[]
   feedbacks          Feedback[]
 
+  sentFriendRequests     FriendRequest[] @relation("FriendRequestSender")
+  receivedFriendRequests FriendRequest[] @relation("FriendRequestReceiver")
+  friendsRel1            Friend[]        @relation("FriendUser1")
+  friendsRel2            Friend[]        @relation("FriendUser2")
+  sentMessages           PrivateMessage[] @relation("MessageSender")
+  receivedMessages       PrivateMessage[] @relation("MessageReceiver")
+  chatRooms              ChatRoomMember[]
+
   @@index([email])
   @@index([phone])
   @@index([userType])
+  @@index([status])
   @@map("users")
 }
 
@@ -261,6 +295,9 @@ model UserSettings {
   soundEnabled        Boolean  @default(true) @map("sound_enabled")
   defaultVideoEnabled Boolean  @default(false) @map("default_video_enabled")
   discoverable        Boolean  @default(true)
+  notificationsEnabled Boolean @default(true) @map("notifications_enabled")
+  showLastSeen        Boolean  @default(true) @map("show_last_seen")
+  showOnlineStatus    Boolean  @default(true) @map("show_online_status")
 
   @@map("user_settings")
 }
@@ -384,15 +421,77 @@ model Block {
 }
 
 model Friend {
-  id         String  @id @default(uuid())
-  userId1    String  @map("user_id_1")
-  userId2    String  @map("user_id_2")
-  status     String  @default("PENDING")
-  isFavorite Boolean @default(false) @map("is_favorite")
+  id         String   @id @default(uuid())
+  userId1    String   @map("user_id_1")
+  userId2    String   @map("user_id_2")
+  user1      User     @relation("FriendUser1", fields: [userId1], references: [id], onDelete: Cascade)
+  user2      User     @relation("FriendUser2", fields: [userId2], references: [id], onDelete: Cascade)
+  status     String   @default("PENDING")
+  isFavorite Boolean  @default(false) @map("is_favorite")
   note       String?
   createdAt  DateTime @default(now()) @map("created_at")
 
+  @@unique([userId1, userId2])
   @@map("friends")
+}
+
+model FriendRequest {
+  id         String              @id @default(uuid())
+  senderId   String              @map("sender_id")
+  sender     User                @relation("FriendRequestSender", fields: [senderId], references: [id], onDelete: Cascade)
+  receiverId String              @map("receiver_id")
+  receiver   User                @relation("FriendRequestReceiver", fields: [receiverId], references: [id], onDelete: Cascade)
+  status     FriendRequestStatus @default(PENDING)
+  createdAt  DateTime            @default(now()) @map("created_at")
+  updatedAt  DateTime            @updatedAt @map("updated_at")
+
+  @@unique([senderId, receiverId])
+  @@map("friend_requests")
+}
+
+model ChatRoom {
+  id        String   @id @default(uuid())
+  type      String   @default("private") // "private" | "group"
+  createdAt DateTime @default(now()) @map("created_at")
+
+  members ChatRoomMember[]
+  messages PrivateMessage[]
+
+  @@map("chat_rooms")
+}
+
+model ChatRoomMember {
+  id       String   @id @default(uuid())
+  roomId   String   @map("room_id")
+  room     ChatRoom @relation(fields: [roomId], references: [id], onDelete: Cascade)
+  userId   String   @map("user_id")
+  user     User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  joinedAt DateTime @default(now()) @map("joined_at")
+
+  @@unique([roomId, userId])
+  @@map("chat_room_members")
+}
+
+model PrivateMessage {
+  id         String        @id @default(uuid())
+  roomId     String        @map("room_id")
+  room       ChatRoom      @relation(fields: [roomId], references: [id], onDelete: Cascade)
+  senderId   String        @map("sender_id")
+  sender     User          @relation("MessageSender", fields: [senderId], references: [id], onDelete: Cascade)
+  receiverId String        @map("receiver_id")
+  receiver   User          @relation("MessageReceiver", fields: [receiverId], references: [id], onDelete: Cascade)
+  text       String
+  imageUrl   String?       @map("image_url")
+  status     MessageStatus @default(SENDING)
+  replyToId  String?       @map("reply_to_id")
+  editedAt   DateTime?     @map("edited_at")
+  deletedAt  DateTime?     @map("deleted_at")
+  createdAt  DateTime      @default(now()) @map("created_at")
+
+  @@index([roomId, createdAt])
+  @@index([senderId])
+  @@index([receiverId, status])
+  @@map("private_messages")
 }
 
 model Appeal {

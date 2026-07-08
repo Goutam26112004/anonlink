@@ -6,9 +6,8 @@ export interface MatchTicket {
   socketId: string;
   interests: string[];
   language: string;
-  country: string;
   isRegistered: boolean;
-  joinedAt: number; // Unix timestamp in seconds
+  joinedAt: number;
   mediaType: 'text' | 'voice' | 'video';
   reputationScore: number;
   gender?: 'MALE' | 'FEMALE' | 'PREFER_NOT_TO_SAY';
@@ -20,11 +19,10 @@ export interface MatchTicket {
 export const MATCH_CONFIG = {
   INTEREST_WEIGHT: 15,
   LANGUAGE_WEIGHT: 30,
-  COUNTRY_WEIGHT: 20,
-  WAIT_TIME_WEIGHT: 2, // Points added per second waiting
-  REPUTATION_GAP_PENALTY: 0.5, // Points deducted per reputation difference unit
-  MATCH_THRESHOLD: 40, // Base score required to trigger a match
-  FALLBACK_TIMEOUT_SEC: 10 // Drop threshold to 0 after this timeout
+  WAIT_TIME_WEIGHT: 2,
+  REPUTATION_GAP_PENALTY: 0.5,
+  MATCH_THRESHOLD: 40,
+  FALLBACK_TIMEOUT_SEC: 10
 };
 
 export class MatchmakerService {
@@ -69,17 +67,11 @@ export class MatchmakerService {
     const sharedInterests = self.interests.filter((i) => candidate.interests.includes(i));
     score += sharedInterests.length * MATCH_CONFIG.INTEREST_WEIGHT;
 
-    // 2. Language Match
     if (self.language === candidate.language) {
       score += MATCH_CONFIG.LANGUAGE_WEIGHT;
     }
 
-    // 3. Country Match
-    if (self.country === candidate.country) {
-      score += MATCH_CONFIG.COUNTRY_WEIGHT;
-    }
-
-    // 4. Wait Time Booster (Starvation prevention)
+    // 3. Wait Time Booster (Starvation prevention)
     const selfWaitTime = currentTime - self.joinedAt;
     const candidateWaitTime = currentTime - candidate.joinedAt;
     score += (selfWaitTime + candidateWaitTime) * MATCH_CONFIG.WAIT_TIME_WEIGHT;

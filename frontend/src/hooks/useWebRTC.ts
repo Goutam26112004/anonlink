@@ -19,15 +19,13 @@ export const useWebRTC = () => {
     setMicMuted,
     isCamOff,
     setCamOff,
-    setConnectionQuality
+    setConnectionQuality,
+    chatMode
   } = useChatStore();
 
   const { socket } = useSocket();
   const pcRef = useRef<RTCPeerConnection | null>(null);
 
-  /**
-   * Fetch Ephemeral ICE configuration from Coturn credential API.
-   */
   const fetchIceConfig = async (): Promise<RTCConfiguration> => {
     try {
       const res = await fetch(`${BACKEND_URL}/api/v1/webrtc/credentials`, {
@@ -44,34 +42,39 @@ export const useWebRTC = () => {
     }
   };
 
-  /**
-   * Initialize Local Media Capture.
-   */
-  const startLocalMedia = async () => {
+  const startLocalMedia = async (mode?: 'text' | 'voice' | 'video') => {
+    const mediaType = mode || chatMode || 'text';
+
+    if (mediaType === 'text') return null;
+
     try {
-      const stream = await navigator.mediaDevices.getUserMedia({
-        video: { width: 640, height: 480, frameRate: 24 },
-        audio: { echoCancellation: true, noiseSuppression: true, autoGainControl: true }
-      });
+      const constraints: MediaStreamConstraints = {
+        audio: mediaType === 'voice' || mediaType === 'video'
+          ? { echoCancellation: true, noiseSuppression: true, autoGainControl: true }
+          : false,
+        video: mediaType === 'video'
+          ? { width: 640, height: 480, frameRate: 24 }
+          : false
+      };
+
+      const stream = await navigator.mediaDevices.getUserMedia(constraints);
       setLocalStream(stream);
       return stream;
     } catch (error) {
-      console.error('Failed to access camera or microphone:', error);
-      // Fallback to audio only
-      try {
-        const audioStream = await navigator.mediaDevices.getUserMedia({ audio: true });
-        setLocalStream(audioStream);
-        return audioStream;
-      } catch (err) {
-        console.error('Failed fallback audio capture:', err);
+      console.error(`Failed to access ${mediaType} devices:`, error);
+      if (mediaType === 'video') {
+        try {
+          const audioStream = await navigator.mediaDevices.getUserMedia({ audio: true });
+          setLocalStream(audioStream);
+          return audioStream;
+        } catch (err) {
+          console.error('Failed fallback audio capture:', err);
+        }
       }
     }
     return null;
   };
 
-  /**
-   * Stop all active local tracks.
-   */
   const stopLocalMedia = () => {
     if (localStream) {
       localStream.getTracks().forEach((track) => track.stop());
@@ -83,21 +86,16 @@ export const useWebRTC = () => {
     }
   };
 
-  /**
-   * Initialize Peer Connection & Listeners.
-   */
   const initPeerConnection = async (room: string, activeLocalStream: MediaStream) => {
     const rtcConfig = await fetchIceConfig();
     const peerConnection = new RTCPeerConnection(rtcConfig);
     pcRef.current = peerConnection;
     setPc(peerConnection);
 
-    // Add local tracks to peer connection
     activeLocalStream.getTracks().forEach((track) => {
       peerConnection.addTrack(track, activeLocalStream);
     });
 
-    // Listen for candidate discovery
     peerConnection.onicecandidate = (event) => {
       if (event.candidate && socket) {
         socket.emit('chat:signal', {
@@ -107,14 +105,12 @@ export const useWebRTC = () => {
       }
     };
 
-    // Track remote tracks
     peerConnection.ontrack = (event) => {
       if (event.streams && event.streams[0]) {
         setRemoteStream(event.streams[0]);
       }
     };
 
-    // Connection Quality Checker Loop
     const interval = setInterval(async () => {
       if (peerConnection.connectionState === 'closed') {
         clearInterval(interval);
@@ -125,26 +121,17 @@ export const useWebRTC = () => {
         stats.forEach((report) => {
           if (report.type === 'candidate-pair' && report.state === 'succeeded') {
             const rtt = report.currentRoundTripTime;
-            if (rtt < 0.15) {
-              setConnectionQuality('excellent');
-            } else if (rtt < 0.3) {
-              setConnectionQuality('fair');
-            } else {
-              setConnectionQuality('poor');
-            }
+            if (rtt < 0.15) setConnectionQuality('excellent');
+            else if (rtt < 0.3) setConnectionQuality('fair');
+            else setConnectionQuality('poor');
           }
         });
-      } catch (e) {
-        // Stats error ignore
-      }
+      } catch (e) {}
     }, 3000);
 
     return peerConnection;
   };
 
-  /**
-   * Negotiate connection (Offerer role).
-   */
   const createOffer = async (peerConnection: RTCPeerConnection, room: string) => {
     try {
       const offer = await peerConnection.createOffer();
@@ -155,7 +142,6 @@ export const useWebRTC = () => {
     }
   };
 
-  // Listen for socket signaling messages
   useEffect(() => {
     if (!socket || !roomId) return;
 
@@ -186,23 +172,19 @@ export const useWebRTC = () => {
     };
   }, [socket, roomId]);
 
-  // WebRTC Match Lifecycle Triggers
   useEffect(() => {
-    if (roomId) {
+    if (roomId && (chatMode === 'voice' || chatMode === 'video')) {
       const setupCall = async () => {
-        const stream = localStream || (await startLocalMedia());
+        const stream = localStream || (await startLocalMedia(chatMode));
         if (stream) {
           const connection = await initPeerConnection(roomId, stream);
-          // Let matching initiator trigger the offer
-          // Simple logic: user with alphabetically lower socket ID triggers offer
-          if (socket && socket.id && socket.id < (roomId)) {
+          if (socket && socket.id && socket.id < roomId) {
             await createOffer(connection, roomId);
           }
         }
       };
       setupCall();
-    } else {
-      // Cleanup on room teardown
+    } else if (!roomId) {
       if (pcRef.current) {
         pcRef.current.close();
         pcRef.current = null;
@@ -210,12 +192,12 @@ export const useWebRTC = () => {
       }
       setRemoteStream(null);
       setConnectionQuality('searching');
+    } else if (roomId && chatMode === 'text') {
+      setRemoteStream(null);
+      setConnectionQuality('searching');
     }
-  }, [roomId]);
+  }, [roomId, chatMode]);
 
-  /**
-   * Toggle microphone mute.
-   */
   const toggleMic = () => {
     if (localStream) {
       const audioTrack = localStream.getAudioTracks()[0];
@@ -226,9 +208,6 @@ export const useWebRTC = () => {
     }
   };
 
-  /**
-   * Toggle camera off/on.
-   */
   const toggleCam = () => {
     if (localStream) {
       const videoTrack = localStream.getVideoTracks()[0];
@@ -239,18 +218,13 @@ export const useWebRTC = () => {
     }
   };
 
-  /**
-   * Screen Share Toggle.
-   */
   const toggleScreenShare = async () => {
     if (!pcRef.current) return;
 
     if (screenStream) {
-      // Stop screen sharing and return to camera
       screenStream.getTracks().forEach((track) => track.stop());
       setScreenStream(null);
 
-      // Re-enable camera track
       if (localStream) {
         const videoTrack = localStream.getVideoTracks()[0];
         if (videoTrack) {
@@ -259,7 +233,6 @@ export const useWebRTC = () => {
         }
       }
     } else {
-      // Start screen sharing
       try {
         const captureStream = await navigator.mediaDevices.getDisplayMedia({ video: true });
         setScreenStream(captureStream);
@@ -270,7 +243,7 @@ export const useWebRTC = () => {
           if (sender) await sender.replaceTrack(screenTrack);
 
           screenTrack.onended = () => {
-            toggleScreenShare(); // return to camera when user stops sharing via browser bar
+            toggleScreenShare();
           };
         }
       } catch (err) {

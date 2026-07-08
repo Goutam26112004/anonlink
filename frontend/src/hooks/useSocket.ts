@@ -1,6 +1,7 @@
 import { useEffect, useRef } from 'react';
 import { io, Socket } from 'socket.io-client';
 import { useChatStore } from '../store/chatStore';
+import { PrivateChatMessage, FriendRequestData } from '@anon-chat/types';
 
 const BACKEND_URL = process.env.NEXT_PUBLIC_BACKEND_URL || 'http://localhost:4000';
 
@@ -15,7 +16,13 @@ export const useSocket = () => {
     clearMessages,
     setIsTyping,
     addNotification,
-    setQueueStats
+    setQueueStats,
+    addFriendRequest,
+    addPrivateChatRoom,
+    addPrivateMessage,
+    setPrivateMessages,
+    setActivePrivateRoom,
+    friends
   } = useChatStore();
 
   useEffect(() => {
@@ -27,7 +34,6 @@ export const useSocket = () => {
       return;
     }
 
-    // Initialize socket connection
     const socket = io(BACKEND_URL, {
       auth: { token },
       transports: ['websocket', 'polling']
@@ -57,6 +63,10 @@ export const useSocket = () => {
       });
     });
 
+    socket.on('match:left', () => {
+      setMatchStatus('idle');
+    });
+
     socket.on('chat:receive', (msg: any) => {
       addMessage({
         id: msg.messageId,
@@ -71,14 +81,72 @@ export const useSocket = () => {
       setIsTyping(payload.isTyping);
     });
 
-    socket.on('chat:peer_left', () => {
+    socket.on('chat:peer_left', (payload?: { reason?: string }) => {
+      const reason = payload?.reason || 'disconnected';
       setRoomId(null);
       setPeerName(null);
       setMatchStatus('idle');
       addNotification({
         title: 'Stranger Disconnected',
-        message: 'The stranger has disconnected. Click match to find another.'
+        message: reason === 'skip'
+          ? 'Stranger skipped to next match.'
+          : reason === 'block'
+            ? 'Stranger blocked.'
+            : 'The stranger has disconnected.'
       });
+    });
+
+    socket.on('chat:skipped', () => {
+      addNotification({ title: 'Skipped', message: 'You skipped to the next stranger.' });
+    });
+
+    socket.on('chat:ended', () => {
+      addNotification({ title: 'Chat Ended', message: 'Chat has ended.' });
+    });
+
+    // Friend request events
+    socket.on('friend:request_received_in_chat', (payload: FriendRequestData) => {
+      addFriendRequest(payload);
+      addNotification({
+        title: 'Friend Request',
+        message: `New friend request received!`
+      });
+    });
+
+    // Private chat events
+    socket.on('private:message', (msg: PrivateChatMessage) => {
+      addPrivateMessage(msg.roomId, msg);
+
+      const peerUser = friends.find(f => f.userId === msg.senderId);
+      if (peerUser) {
+        addPrivateChatRoom({
+          roomId: msg.roomId,
+          peerUser,
+          lastMessage: msg
+        });
+      }
+
+      addNotification({
+        title: 'New Message',
+        message: `${peerUser?.displayName || 'Friend'} sent a message.`
+      });
+    });
+
+    socket.on('private:delivered', (payload: { messageId: string; roomId: string }) => {
+      addNotification({ title: 'Delivered', message: 'Message delivered.' });
+    });
+
+    socket.on('private:seen', (payload: { roomId: string; userId: string }) => {
+      addNotification({ title: 'Seen', message: 'Message seen.' });
+    });
+
+    socket.on('private:typing', (payload: { userId: string; isTyping: boolean }) => {
+      // Handle typing indicator
+    });
+
+    // User status
+    socket.on('user:status', (payload: { userId: string; status: string }) => {
+      // Update friend status in store
     });
 
     socket.on('system:warning', (payload: { message: string }) => {
@@ -92,6 +160,10 @@ export const useSocket = () => {
       });
     });
 
+    socket.on('feature:locked', (payload: { feature: string; message: string }) => {
+      alert(payload.message);
+    });
+
     socket.on('disconnect', () => {
       console.log('Socket.IO connection lost');
     });
@@ -102,8 +174,8 @@ export const useSocket = () => {
     };
   }, [token]);
 
-  const joinQueue = (interests: string[], language: string, country: string, mediaType: 'text' | 'voice' | 'video' = 'text') => {
-    socketRef.current?.emit('match:join', { interests, language, country, mediaType });
+  const joinQueue = (interests: string[], language: string, mediaType: 'text' | 'voice' | 'video' = 'text') => {
+    socketRef.current?.emit('match:join', { interests, language, mediaType });
   };
 
   const leaveQueue = (mediaType: 'text' | 'voice' | 'video' = 'text') => {
@@ -126,6 +198,13 @@ export const useSocket = () => {
     setMatchStatus('idle');
   };
 
+  const endChat = () => {
+    socketRef.current?.emit('chat:end');
+    setRoomId(null);
+    setPeerName(null);
+    setMatchStatus('idle');
+  };
+
   const report = (reason: string) => {
     socketRef.current?.emit('user:report', { reason });
   };
@@ -137,6 +216,24 @@ export const useSocket = () => {
     setMatchStatus('idle');
   };
 
+  // Friend request in chat
+  const sendFriendRequestInChat = () => {
+    socketRef.current?.emit('friend:request_in_chat');
+  };
+
+  // Private messaging
+  const privateSend = (roomId: string, text: string) => {
+    socketRef.current?.emit('private:send', { roomId, text });
+  };
+
+  const privateSendTyping = (roomId: string, isTyping: boolean) => {
+    socketRef.current?.emit('private:typing', { roomId, isTyping });
+  };
+
+  const privateMarkRead = (roomId: string) => {
+    socketRef.current?.emit('private:read', { roomId });
+  };
+
   return {
     socket: socketRef.current,
     joinQueue,
@@ -144,7 +241,12 @@ export const useSocket = () => {
     sendMessage,
     sendTyping,
     skip,
+    endChat,
     report,
-    block
+    block,
+    sendFriendRequestInChat,
+    privateSend,
+    privateSendTyping,
+    privateMarkRead
   };
 };

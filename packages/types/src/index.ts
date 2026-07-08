@@ -6,6 +6,9 @@ export type Gender = 'MALE' | 'FEMALE' | 'PREFER_NOT_TO_SAY';
 export type GenderPreference = 'MALE' | 'FEMALE' | 'NO_PREFERENCE';
 export type SubscriptionPlanType = 'DAILY' | 'WEEKLY' | 'MONTHLY';
 export type SubscriptionStatus = 'ACTIVE' | 'EXPIRED' | 'CANCELLED';
+export type FriendRequestStatusType = 'PENDING' | 'ACCEPTED' | 'REJECTED' | 'CANCELLED';
+export type MessageStatusType = 'SENDING' | 'SENT' | 'DELIVERED' | 'SEEN';
+export type UserStatusType = 'ONLINE' | 'OFFLINE' | 'AWAY' | 'BUSY';
 
 export interface UserSettings {
   theme: 'light' | 'dark';
@@ -13,6 +16,9 @@ export interface UserSettings {
   soundEnabled: boolean;
   defaultVideoEnabled: boolean;
   discoverable: boolean;
+  notificationsEnabled: boolean;
+  showLastSeen: boolean;
+  showOnlineStatus: boolean;
 }
 
 export interface UserSession {
@@ -26,6 +32,10 @@ export interface UserSession {
   level: number;
   isShadowBanned?: boolean;
   avatarUrl?: string | null;
+  displayName?: string | null;
+  bio?: string | null;
+  status?: UserStatusType;
+  lastSeen?: string;
   onboardingComplete: boolean;
   subscriptionActive?: boolean;
   subscriptionPlan?: SubscriptionPlanType | null;
@@ -57,7 +67,6 @@ export interface MatchFilters {
   interests: string[];
   mediaType: MediaType;
   language: string;
-  country: string;
   genderPreference?: GenderPreference;
 }
 
@@ -77,6 +86,20 @@ export interface ChatMessage {
   encrypted: boolean;
 }
 
+export interface PrivateChatMessage {
+  id: string;
+  roomId: string;
+  senderId: string;
+  receiverId: string;
+  text: string;
+  imageUrl?: string | null;
+  status: MessageStatusType;
+  replyToId?: string | null;
+  editedAt?: string | null;
+  deletedAt?: string | null;
+  createdAt: string;
+}
+
 export interface TemporaryMediaMessage {
   mediaId: string;
   expiresAt: string;
@@ -89,50 +112,41 @@ export interface WebRTCSignal {
   sdp?: any;
 }
 
-
-export interface UserSettings {
-  theme: 'light' | 'dark';
-  languagePref: string;
-  soundEnabled: boolean;
-  defaultVideoEnabled: boolean;
-  discoverable: boolean;
+export interface FriendRequestData {
+  id: string;
+  senderId: string;
+  receiverId: string;
+  status: FriendRequestStatusType;
+  sender?: {
+    userId: string;
+    email: string | null;
+    displayName: string | null;
+    avatarUrl: string | null;
+    level: number;
+    status: UserStatusType;
+  };
+  receiver?: {
+    userId: string;
+    email: string | null;
+    displayName: string | null;
+    avatarUrl: string | null;
+    level: number;
+    status: UserStatusType;
+  };
+  createdAt: string;
 }
 
-export interface UserSession {
+export interface FriendData {
+  id: string;
   userId: string;
   email: string | null;
-  registrationType: 'GUEST' | 'OAUTH' | 'EMAIL' | 'guest' | 'oauth' | 'email';
-  emailVerified: boolean;
-  reputationScore: number;
-  experiencePoints: number;
+  displayName: string | null;
+  avatarUrl: string | null;
   level: number;
-  isShadowBanned: boolean;
-}
-
-export interface MatchFilters {
-  interests: string[];
-  mediaType: MediaType;
-  language: string;
-  country: string;
-}
-
-export interface MatchFoundPayload {
-  roomId: string;
-  peerName: string;
-  isVideoCapable: boolean;
-  isAi: boolean;
-  e2eePublicKey?: string; // Client DH public key for E2EE text chats
-}
-
-export interface ChatMessage {
-  id: string;
-  sender: 'self' | 'stranger';
-  text: string;
-  sentAt: string;
-  encrypted: boolean;
-}
-
-export interface WebRTCSignal {
-  candidate?: any;
-  sdp?: any;
+  reputationScore: number;
+  status: UserStatusType;
+  lastSeen: string;
+  friendSince: string;
+  isFavorite: boolean;
+  note: string | null;
 }

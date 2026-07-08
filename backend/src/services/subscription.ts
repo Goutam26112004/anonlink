@@ -5,7 +5,7 @@ export const SubscriptionService = {
   /**
    * Get the current active subscription for a user (checks expiry).
    */
-  async getActiveSubscription(userId: string) {
+  async getActiveSubscription(userId: string): Promise<any> {
     const now = new Date();
     const sub = await prisma.userSubscription.findFirst({
       where: {
@@ -59,8 +59,8 @@ export const SubscriptionService = {
 
     if (expired.length === 0) return 0;
 
-    const expiredIds = expired.map((s) => s.id);
-    const userIds = [...new Set(expired.map((s) => s.userId))];
+    const expiredIds = expired.map((s: any) => s.id);
+    const userIds = [...new Set(expired.map((s: any) => s.userId))] as string[];
 
     await prisma.userSubscription.updateMany({
       where: { id: { in: expiredIds } },

@@ -52,7 +52,7 @@ export const TempMediaService = {
       }
     }
     await prisma.temporaryMedia.updateMany({
-      where: { id: { in: expired.map((r) => r.id) } },
+      where: { id: { in: expired.map((r: any) => r.id) } },
       data: { isDeleted: true }
     });
     return deleted;

@@ -555,7 +555,7 @@ router.post('/google/unlink', authGuard, async (req: RequestWithUser, res: Respo
 
     // Check if another login method remains available
     const hasPassword = user.passwordHash !== null;
-    const otherProviders = (user.linkedProviders || []).filter(p => p !== 'google');
+    const otherProviders = (user.linkedProviders || []).filter((p: string) => p !== 'google');
     const hasOtherLogin = hasPassword || otherProviders.length > 0;
 
     if (!hasOtherLogin) {

@@ -42,7 +42,7 @@ router.get('/achievements', authGuard, async (req: RequestWithUser, res: Respons
       include: { achievement: true }
     });
 
-    return res.json({ achievements: unlocked.map((u) => u.achievement) });
+    return res.json({ achievements: unlocked.map((u: any) => u.achievement) });
   } catch (error: any) {
     return res.status(500).json({ error: error.message });
   }
@@ -60,7 +60,7 @@ router.get('/badges', authGuard, async (req: RequestWithUser, res: Response) => 
       include: { badge: true }
     });
 
-    return res.json({ badges: badges.map((b) => b.badge) });
+    return res.json({ badges: badges.map((b: any) => b.badge) });
   } catch (error: any) {
     return res.status(500).json({ error: error.message });
   }

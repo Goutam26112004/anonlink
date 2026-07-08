@@ -1,5 +1,5 @@
 import { create } from 'zustand';
-import { ChatMessage, UserSession, GenderPreference, SubscriptionPlanType } from '@anon-chat/types';
+import { ChatMessage, UserSession, GenderPreference, SubscriptionPlanType, PrivateChatMessage, FriendRequestData, FriendData } from '@anon-chat/types';
 
 export interface Friend {
   id: string;
@@ -17,10 +17,19 @@ interface ChatState {
   messages: ChatMessage[];
   isTyping: boolean;
   theme: 'dark' | 'light';
-  friends: Friend[];
+  friends: FriendData[];
+  friendRequests: FriendRequestData[];
   notifications: Array<{ id: string; title: string; message: string; isRead: boolean }>;
-  
-  // Media streams states for Phase 4
+
+  // Chat mode
+  chatMode: 'text' | 'voice' | 'video';
+
+  // Private messages
+  privateChatRooms: Array<{ roomId: string; peerUser: FriendData; lastMessage: PrivateChatMessage | null }>;
+  privateMessages: Record<string, PrivateChatMessage[]>;
+  activePrivateRoom: string | null;
+
+  // Media streams states
   localStream: MediaStream | null;
   remoteStream: MediaStream | null;
   screenStream: MediaStream | null;
@@ -29,11 +38,11 @@ interface ChatState {
   isCamOff: boolean;
   connectionQuality: 'excellent' | 'fair' | 'poor' | 'searching';
 
-  // Matchmaking Queue Stats for Phase 5
+  // Matchmaking Queue Stats
   activeCount: number;
   estimatedWaitSec: number;
 
-  // Subscription & Feature Access (Phase 13)
+  // Subscription & Feature Access
   onboardingComplete: boolean;
   subscriptionActive: boolean;
   subscriptionPlan: SubscriptionPlanType | null;
@@ -41,7 +50,7 @@ interface ChatState {
   canVideo: boolean;
   canGenderFilter: boolean;
   genderPreference: GenderPreference;
-  
+
   setToken: (token: string | null) => void;
   setUser: (user: UserSession | null) => void;
   setMatchStatus: (status: 'idle' | 'searching' | 'connecting' | 'chat') => void;
@@ -51,9 +60,20 @@ interface ChatState {
   clearMessages: () => void;
   setIsTyping: (typing: boolean) => void;
   toggleTheme: () => void;
-  setFriends: (friends: Friend[]) => void;
+  setFriends: (friends: FriendData[]) => void;
+  setFriendRequests: (requests: FriendRequestData[]) => void;
+  addFriendRequest: (req: FriendRequestData) => void;
+  removeFriendRequest: (id: string) => void;
   addNotification: (notif: { title: string; message: string }) => void;
-  
+  setChatMode: (mode: 'text' | 'voice' | 'video') => void;
+
+  // Private chat
+  setPrivateChatRooms: (rooms: Array<{ roomId: string; peerUser: FriendData; lastMessage: PrivateChatMessage | null }>) => void;
+  addPrivateChatRoom: (room: { roomId: string; peerUser: FriendData; lastMessage: PrivateChatMessage | null }) => void;
+  setPrivateMessages: (roomId: string, messages: PrivateChatMessage[]) => void;
+  addPrivateMessage: (roomId: string, msg: PrivateChatMessage) => void;
+  setActivePrivateRoom: (roomId: string | null) => void;
+
   // Media stream setters
   setLocalStream: (stream: MediaStream | null) => void;
   setRemoteStream: (stream: MediaStream | null) => void;
@@ -83,8 +103,13 @@ export const useChatStore = create<ChatState>((set) => ({
   isTyping: false,
   theme: 'dark',
   friends: [],
+  friendRequests: [],
   notifications: [],
-  
+  chatMode: 'text',
+  privateChatRooms: [],
+  privateMessages: {},
+  activePrivateRoom: null,
+
   localStream: null,
   remoteStream: null,
   screenStream: null,
@@ -96,7 +121,6 @@ export const useChatStore = create<ChatState>((set) => ({
   activeCount: 0,
   estimatedWaitSec: 0,
 
-  // Subscription & onboarding state
   onboardingComplete: false,
   subscriptionActive: false,
   subscriptionPlan: null,
@@ -122,13 +146,34 @@ export const useChatStore = create<ChatState>((set) => ({
   setIsTyping: (isTyping) => set({ isTyping }),
   toggleTheme: () => set((state) => ({ theme: state.theme === 'dark' ? 'light' : 'dark' })),
   setFriends: (friends) => set({ friends }),
+  setFriendRequests: (friendRequests) => set({ friendRequests }),
+  addFriendRequest: (req) => set((state) => ({ friendRequests: [...state.friendRequests.filter(r => r.id !== req.id), req] })),
+  removeFriendRequest: (id) => set((state) => ({ friendRequests: state.friendRequests.filter(r => r.id !== id) })),
   addNotification: (notif) => set((state) => ({
     notifications: [
       ...state.notifications,
       { id: Math.random().toString(), isRead: false, ...notif }
     ]
   })),
-  
+  setChatMode: (chatMode) => set({ chatMode }),
+
+  setPrivateChatRooms: (privateChatRooms) => set({ privateChatRooms }),
+  addPrivateChatRoom: (room) => set((state) => {
+    const exists = state.privateChatRooms.find(r => r.roomId === room.roomId);
+    if (exists) return state;
+    return { privateChatRooms: [...state.privateChatRooms, room] };
+  }),
+  setPrivateMessages: (roomId, messages) => set((state) => ({
+    privateMessages: { ...state.privateMessages, [roomId]: messages }
+  })),
+  addPrivateMessage: (roomId, msg) => set((state) => ({
+    privateMessages: {
+      ...state.privateMessages,
+      [roomId]: [...(state.privateMessages[roomId] || []), msg]
+    }
+  })),
+  setActivePrivateRoom: (activePrivateRoom) => set({ activePrivateRoom }),
+
   setLocalStream: (localStream) => set({ localStream }),
   setRemoteStream: (remoteStream) => set({ remoteStream }),
   setScreenStream: (screenStream) => set({ screenStream }),
