@@ -140,14 +140,9 @@ router.post('/register', async (req, res) => {
  * Login User
  */
 router.post('/login', async (req, res) => {
-  const { email, password, captchaToken } = req.body;
+  const { email, password } = req.body;
   if (!email || !password) {
     return res.status(400).json({ error: 'Email and password are required.' });
-  }
-
-  const captchaResult = await verifyCaptcha(captchaToken || '');
-  if (!captchaResult.valid) {
-    return res.status(400).json({ error: 'CAPTCHA verification failed. Please try again.' });
   }
 
   try {
