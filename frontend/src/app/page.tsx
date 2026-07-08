@@ -5,6 +5,8 @@ import { useChatStore } from '../store/chatStore';
 import { useSocket } from '../hooks/useSocket';
 import { useRouter } from 'next/navigation';
 import { LogIn, UserPlus, UserCheck, ShieldAlert, Sparkles, Languages, Globe } from 'lucide-react';
+import ReCaptcha from '../components/ReCaptcha';
+import { motion, AnimatePresence } from 'framer-motion';
 
 const BACKEND_URL = process.env.NEXT_PUBLIC_BACKEND_URL || 'http://localhost:4000';
 
@@ -16,6 +18,7 @@ export default function Home() {
   const [mode, setMode] = useState<'login' | 'register'>('login');
   const [error, setError] = useState('');
   const [loading, setLoading] = useState(false);
+  const [captchaToken, setCaptchaToken] = useState('');
 
   // Check for Google OAuth errors in the query parameter
   useEffect(() => {
@@ -87,12 +90,18 @@ export default function Home() {
     setError('');
     setLoading(true);
 
+    if (mode === 'register' && !captchaToken) {
+      setError('Please complete the CAPTCHA verification.');
+      setLoading(false);
+      return;
+    }
+
     const url = mode === 'login' ? '/api/v1/auth/login' : '/api/v1/auth/register';
     try {
       const response = await fetch(`${BACKEND_URL}${url}`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ email, password })
+        body: JSON.stringify({ email, password, captchaToken })
       });
       const data = await response.json();
       if (!response.ok) throw new Error(data.error || 'Authentication failed');
@@ -112,50 +121,87 @@ export default function Home() {
   };
 
   return (
-    <div className={`min-h-screen transition-colors duration-300 flex flex-col md:flex-row items-center justify-center p-6 ${
+    <div className={`min-h-screen transition-colors duration-300 flex flex-col md:flex-row items-center justify-center p-6 relative overflow-hidden ${
       theme === 'dark' ? 'bg-[#0B0F19] text-white' : 'bg-[#F8FAFC] text-slate-900'
     }`}>
+      {/* Glassmorphism background effects */}
+      {theme === 'dark' && (
+        <>
+          <div className="absolute -top-40 -right-40 w-96 h-96 bg-indigo-500/10 rounded-full blur-3xl"></div>
+          <div className="absolute -bottom-40 -left-40 w-96 h-96 bg-purple-500/10 rounded-full blur-3xl"></div>
+          <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[600px] h-[600px] bg-indigo-600/5 rounded-full blur-3xl"></div>
+        </>
+      )}
+
       {/* Accessibility Skip Link */}
-      <a href="#auth-card" className="sr-only focus:not-sr-only focus:absolute focus:top-4 focus:left-4 bg-indigo-600 text-white p-3 rounded">
+      <a href="#auth-card" className="sr-only focus:not-sr-only focus:absolute focus:top-4 focus:left-4 bg-indigo-600 text-white p-3 rounded z-50">
         Skip to Login Form
       </a>
 
       {/* Hero Section */}
-      <div className="w-full md:w-1/2 flex flex-col justify-center items-start pr-0 md:pr-12 mb-8 md:mb-0">
-        <div className="flex items-center gap-2 mb-4 bg-indigo-600/10 text-indigo-500 px-4 py-1.5 rounded-full text-sm font-semibold tracking-wide">
+      <motion.div
+        initial={{ opacity: 0, x: -50 }}
+        animate={{ opacity: 1, x: 0 }}
+        transition={{ duration: 0.6, ease: 'easeOut' }}
+        className="w-full md:w-1/2 flex flex-col justify-center items-start pr-0 md:pr-12 mb-8 md:mb-0 relative z-10"
+      >
+        <motion.div
+          initial={{ opacity: 0, y: -20 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ delay: 0.2, duration: 0.5 }}
+          className="flex items-center gap-2 mb-4 bg-indigo-600/10 text-indigo-500 px-4 py-1.5 rounded-full text-sm font-semibold tracking-wide backdrop-blur-sm border border-indigo-500/10"
+        >
           <Sparkles className="w-4 h-4" /> 100% Free & Self-Hosted
-        </div>
-        <h1 className="text-4xl md:text-6xl font-extrabold tracking-tight mb-6 bg-gradient-to-r from-indigo-500 via-purple-500 to-pink-500 bg-clip-text text-transparent leading-none">
+        </motion.div>
+        <motion.h1
+          initial={{ opacity: 0, y: -20 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ delay: 0.3, duration: 0.5 }}
+          className="text-4xl md:text-6xl font-extrabold tracking-tight mb-6 bg-gradient-to-r from-indigo-500 via-purple-500 to-pink-500 bg-clip-text text-transparent leading-none"
+        >
           Connect with Strangers Worldwide.
-        </h1>
-        <p className="text-lg text-slate-400 mb-8 max-w-md">
-          Chat anonymously, filter by matching interests, language, and country, all without trackers, subscription plans, or intrusive ads.
-        </p>
+        </motion.h1>
+        <motion.p
+          initial={{ opacity: 0, y: -20 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ delay: 0.4, duration: 0.5 }}
+          className="text-lg text-slate-400 mb-8 max-w-md"
+        >
+          Chat anonymously, filter by matching interests and language, all without trackers, subscription plans, or intrusive ads.
+        </motion.p>
 
         {/* Feature Icons Grid */}
-        <div className="grid grid-cols-2 gap-4 max-w-sm">
+        <motion.div
+          initial={{ opacity: 0, y: 20 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ delay: 0.5, duration: 0.5 }}
+          className="grid grid-cols-2 gap-4 max-w-sm"
+        >
           <div className="flex items-center gap-3">
-            <div className="p-2.5 rounded-lg bg-indigo-600/10 text-indigo-500">
+            <div className="p-2.5 rounded-lg bg-indigo-600/10 text-indigo-500 backdrop-blur-sm border border-indigo-500/10">
               <Globe className="w-5 h-5" />
             </div>
             <span className="text-sm font-semibold text-slate-400">Global Match</span>
           </div>
           <div className="flex items-center gap-3">
-            <div className="p-2.5 rounded-lg bg-indigo-600/10 text-indigo-500">
+            <div className="p-2.5 rounded-lg bg-indigo-600/10 text-indigo-500 backdrop-blur-sm border border-indigo-500/10">
               <Languages className="w-5 h-5" />
             </div>
             <span className="text-sm font-semibold text-slate-400">Language Lock</span>
           </div>
-        </div>
-      </div>
+        </motion.div>
+      </motion.div>
 
       {/* Glassmorphic Form Card */}
-      <div 
+      <motion.div
         id="auth-card"
-        className={`w-full md:w-[450px] p-8 rounded-3xl border transition-all duration-300 ${
+        initial={{ opacity: 0, x: 50 }}
+        animate={{ opacity: 1, x: 0 }}
+        transition={{ duration: 0.6, ease: 'easeOut', delay: 0.2 }}
+        className={`w-full md:w-[450px] p-8 rounded-3xl border transition-all duration-300 relative z-10 ${
           theme === 'dark' 
-            ? 'bg-[#1E293B]/60 backdrop-blur-xl border-white/5 shadow-2xl'
-            : 'bg-white border-slate-200/80 shadow-xl'
+            ? 'bg-[#1E293B]/60 backdrop-blur-xl border-white/10 shadow-2xl shadow-indigo-500/5'
+            : 'bg-white/80 backdrop-blur-xl border-slate-200/80 shadow-xl'
         }`}
       >
         <div className="flex justify-between items-center mb-6">
@@ -211,10 +257,21 @@ export default function Home() {
             />
           </div>
 
+          {mode === 'register' && (
+            <ReCaptcha
+              onVerify={(token) => setCaptchaToken(token)}
+              onExpire={() => setCaptchaToken('')}
+            />
+          )}
+
           <button 
             type="submit" 
-            disabled={loading}
-            className="w-full py-3 rounded-xl bg-gradient-to-r from-indigo-600 to-purple-600 text-white font-bold hover:brightness-110 active:scale-95 transition-all text-sm flex items-center justify-center gap-2 cursor-pointer"
+            disabled={loading || (mode === 'register' && !captchaToken)}
+            className={`w-full py-3 rounded-xl text-white font-bold hover:brightness-110 active:scale-95 transition-all text-sm flex items-center justify-center gap-2 cursor-pointer ${
+              loading || (mode === 'register' && !captchaToken)
+                ? 'bg-slate-600 cursor-not-allowed'
+                : 'bg-gradient-to-r from-indigo-600 to-purple-600'
+            }`}
           >
             {loading ? 'Processing...' : mode === 'login' ? <><LogIn className="w-4 h-4" /> Log In</> : <><UserPlus className="w-4 h-4" /> Sign Up</>}
           </button>
@@ -280,7 +337,7 @@ export default function Home() {
             {mode === 'login' ? 'Sign Up' : 'Log In'}
           </button>
         </p>
-      </div>
+      </motion.div>
     </div>
   );
 }

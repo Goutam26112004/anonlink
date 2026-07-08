@@ -7,6 +7,7 @@ import { redisClient } from '../config/redis.js';
 import { generateToken, verifyToken } from '../utils/jwt.js';
 import { authGuard, RequestWithUser } from '../middleware/auth.js';
 import { verifyGoogleIdToken, getGoogleAuthUrl, getTokensFromCode } from '../utils/oauth.js';
+import { verifyCaptcha } from '../services/captcha.js';
 
 const router = Router();
 
@@ -75,9 +76,14 @@ router.post('/guest', async (req, res) => {
  * Register User
  */
 router.post('/register', async (req, res) => {
-  const { email, password } = req.body;
+  const { email, password, captchaToken } = req.body;
   if (!email || !password || password.length < 6) {
     return res.status(400).json({ error: 'Email and valid password (min 6 chars) are required.' });
+  }
+
+  const captchaResult = await verifyCaptcha(captchaToken || '');
+  if (!captchaResult.valid) {
+    return res.status(400).json({ error: 'CAPTCHA verification failed. Please try again.' });
   }
 
   try {
@@ -134,9 +140,14 @@ router.post('/register', async (req, res) => {
  * Login User
  */
 router.post('/login', async (req, res) => {
-  const { email, password } = req.body;
+  const { email, password, captchaToken } = req.body;
   if (!email || !password) {
     return res.status(400).json({ error: 'Email and password are required.' });
+  }
+
+  const captchaResult = await verifyCaptcha(captchaToken || '');
+  if (!captchaResult.valid) {
+    return res.status(400).json({ error: 'CAPTCHA verification failed. Please try again.' });
   }
 
   try {

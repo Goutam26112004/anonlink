@@ -11,6 +11,7 @@ import {
   Crown, ImageIcon, X, Lock, MessageCircle, UserCheck, UserX, StopCircle
 } from 'lucide-react';
 import { FriendData, FriendRequestData, PrivateChatMessage } from '@anon-chat/types';
+import { motion, AnimatePresence } from 'framer-motion';
 
 const BACKEND_URL = process.env.NEXT_PUBLIC_BACKEND_URL || 'http://localhost:4000';
 
@@ -352,10 +353,25 @@ export default function Dashboard() {
     <div className={`min-h-screen flex flex-col transition-colors duration-300 ${
       theme === 'dark' ? 'bg-[#0B0F19] text-white' : 'bg-[#F8FAFC] text-slate-900'
     }`}>
-      {/* Top Header */}
-      <header className={`px-6 py-4 flex justify-between items-center border-b ${
-        theme === 'dark' ? 'border-white/5 bg-[#1E293B]/40' : 'border-slate-200 bg-white'
-      }`}>
+      {/* Glassmorphism background effects */}
+      {theme === 'dark' && (
+        <>
+          <div className="fixed inset-0 -z-10">
+            <div className="absolute -top-40 -right-40 w-96 h-96 bg-indigo-500/[0.04] rounded-full blur-3xl"></div>
+            <div className="absolute -bottom-40 -left-40 w-96 h-96 bg-purple-500/[0.04] rounded-full blur-3xl"></div>
+            <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[800px] h-[800px] bg-indigo-600/[0.02] rounded-full blur-3xl"></div>
+          </div>
+        </>
+      )}
+
+      {/* Top Header with glassmorphism */}
+      <motion.header
+        initial={{ y: -20, opacity: 0 }}
+        animate={{ y: 0, opacity: 1 }}
+        transition={{ duration: 0.3 }}
+        className={`px-6 py-4 flex justify-between items-center border-b backdrop-blur-xl ${
+          theme === 'dark' ? 'border-white/5 bg-[#1E293B]/40' : 'border-slate-200 bg-white/80'
+        }`}>
         <div className="flex items-center gap-3">
           <span className="text-xl font-black bg-gradient-to-r from-indigo-500 to-purple-500 bg-clip-text text-transparent">
             AnonChat
@@ -416,7 +432,7 @@ export default function Dashboard() {
             <LogOut className="w-4 h-4" /> Log Out
           </button>
         </div>
-      </header>
+      </motion.header>
 
       {/* Main Layout Area */}
       <div className="flex-1 flex flex-col md:flex-row overflow-hidden">
