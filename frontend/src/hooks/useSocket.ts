@@ -113,6 +113,28 @@ export const useSocket = () => {
       });
     });
 
+    socket.on('friend:request_received', (payload: FriendRequestData) => {
+      addFriendRequest(payload);
+      addNotification({
+        title: 'Friend Request',
+        message: `${payload.sender?.displayName || payload.sender?.email || 'Someone'} sent you a friend request.`
+      });
+    });
+
+    socket.on('friend:request_accepted', (payload: { requestId: string; chatRoomId: string; friend: any }) => {
+      addNotification({
+        title: 'Friend Request Accepted',
+        message: `${payload.friend?.displayName || payload.friend?.email || 'Someone'} accepted your friend request!`
+      });
+    });
+
+    socket.on('friend:request_rejected', (payload: { requestId: string }) => {
+      addNotification({
+        title: 'Friend Request Rejected',
+        message: 'Your friend request was rejected.'
+      });
+    });
+
     // Private chat events
     socket.on('private:message', (msg: PrivateChatMessage) => {
       addPrivateMessage(msg.roomId, msg);

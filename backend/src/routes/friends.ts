@@ -105,12 +105,208 @@ router.get('/requests', async (req: RequestWithUser, res: Response) => {
   }
 });
 
+router.get('/requests/incoming', async (req: RequestWithUser, res: Response) => {
+  const user = req.user!;
+  try {
+    const received = await prisma.friendRequest.findMany({
+      where: { receiverId: user.userId, status: 'PENDING' },
+      include: {
+        sender: { select: { id: true, email: true, displayName: true, avatarUrl: true, level: true, status: true } }
+      },
+      orderBy: { createdAt: 'desc' }
+    });
+
+    return res.json({
+      requests: received.map((r: any) => ({
+        id: r.id,
+        senderId: r.senderId,
+        receiverId: r.receiverId,
+        status: r.status,
+        sender: r.sender,
+        createdAt: r.createdAt.toISOString()
+      }))
+    });
+  } catch (error) {
+    console.error('Incoming requests fetch error:', error);
+    return res.status(500).json({ error: 'Failed to fetch incoming requests' });
+  }
+});
+
+router.get('/requests/outgoing', async (req: RequestWithUser, res: Response) => {
+  const user = req.user!;
+  try {
+    const sent = await prisma.friendRequest.findMany({
+      where: { senderId: user.userId, status: 'PENDING' },
+      include: {
+        receiver: { select: { id: true, email: true, displayName: true, avatarUrl: true, level: true, status: true } }
+      },
+      orderBy: { createdAt: 'desc' }
+    });
+
+    return res.json({
+      requests: sent.map((r: any) => ({
+        id: r.id,
+        senderId: r.senderId,
+        receiverId: r.receiverId,
+        status: r.status,
+        receiver: r.receiver,
+        createdAt: r.createdAt.toISOString()
+      }))
+    });
+  } catch (error) {
+    console.error('Outgoing requests fetch error:', error);
+    return res.status(500).json({ error: 'Failed to fetch outgoing requests' });
+  }
+});
+
+router.post('/requests/:requestId/accept', async (req: RequestWithUser, res: Response) => {
+  const user = req.user!;
+  const { requestId } = req.params;
+
+  try {
+    const request = await prisma.friendRequest.findUnique({ where: { id: requestId } });
+    if (!request || request.receiverId !== user.userId || request.status !== 'PENDING') {
+      return res.status(400).json({ error: 'Invalid or unauthorized friend request.' });
+    }
+
+    await prisma.friendRequest.update({
+      where: { id: requestId },
+      data: { status: 'ACCEPTED' }
+    });
+
+    await prisma.friend.create({
+      data: {
+        userId1: request.senderId,
+        userId2: request.receiverId,
+        status: 'ACCEPTED'
+      }
+    });
+
+    let chatRoom = await prisma.chatRoom.findFirst({
+      where: {
+        type: 'private',
+        members: {
+          every: {
+            userId: { in: [request.senderId, request.receiverId] }
+          }
+        }
+      }
+    });
+
+    if (!chatRoom) {
+      chatRoom = await prisma.chatRoom.create({
+        data: {
+          type: 'private',
+          members: {
+            create: [
+              { userId: request.senderId },
+              { userId: request.receiverId }
+            ]
+          }
+        }
+      });
+    }
+
+    const io = req.app.get('io');
+    const senderSocketId = await MatchmakerService.getActiveSocket(request.senderId);
+    if (senderSocketId && io) {
+      const receiverInfo = await prisma.user.findUnique({
+        where: { id: user.userId },
+        select: { id: true, email: true, displayName: true, avatarUrl: true, level: true, status: true }
+      });
+      io.to(senderSocketId).emit('friend:request_accepted', {
+        requestId: request.id,
+        chatRoomId: chatRoom.id,
+        friend: receiverInfo
+      });
+    }
+
+    const receiverInfo = await prisma.user.findUnique({
+      where: { id: user.userId },
+      select: { id: true, email: true, displayName: true, avatarUrl: true, level: true, status: true }
+    });
+
+    return res.json({
+      success: true,
+      chatRoomId: chatRoom.id,
+      friend: receiverInfo
+    });
+  } catch (error) {
+    console.error('Accept request error:', error);
+    return res.status(500).json({ error: 'Failed to accept request' });
+  }
+});
+
+router.post('/requests/:requestId/reject', async (req: RequestWithUser, res: Response) => {
+  const user = req.user!;
+  const { requestId } = req.params;
+
+  try {
+    const request = await prisma.friendRequest.findUnique({ where: { id: requestId } });
+    if (!request || request.receiverId !== user.userId || request.status !== 'PENDING') {
+      return res.status(400).json({ error: 'Invalid or unauthorized request.' });
+    }
+
+    await prisma.friendRequest.update({
+      where: { id: requestId },
+      data: { status: 'REJECTED' }
+    });
+
+    const io = req.app.get('io');
+    const senderSocketId = await MatchmakerService.getActiveSocket(request.senderId);
+    if (senderSocketId && io) {
+      io.to(senderSocketId).emit('friend:request_rejected', {
+        requestId: request.id
+      });
+    }
+
+    return res.json({ success: true });
+  } catch (error) {
+    console.error('Reject request error:', error);
+    return res.status(500).json({ error: 'Failed to reject request' });
+  }
+});
+
+router.post('/requests/:requestId/cancel', async (req: RequestWithUser, res: Response) => {
+  const user = req.user!;
+  const { requestId } = req.params;
+
+  try {
+    const request = await prisma.friendRequest.findUnique({ where: { id: requestId } });
+    if (!request || request.senderId !== user.userId || request.status !== 'PENDING') {
+      return res.status(400).json({ error: 'Invalid or unauthorized request.' });
+    }
+
+    await prisma.friendRequest.update({
+      where: { id: requestId },
+      data: { status: 'CANCELLED' }
+    });
+
+    return res.json({ success: true });
+  } catch (error) {
+    console.error('Cancel request error:', error);
+    return res.status(500).json({ error: 'Failed to cancel request' });
+  }
+});
+
 router.post('/request', async (req: RequestWithUser, res: Response) => {
   const user = req.user!;
-  const { receiverId } = req.body;
+  let { receiverId, friendEmail } = req.body;
+
+  if (!receiverId && !friendEmail) {
+    return res.status(400).json({ error: 'receiverId or friendEmail is required.' });
+  }
+
+  if (friendEmail && !receiverId) {
+    const target = await prisma.user.findUnique({ where: { email: friendEmail } });
+    if (!target) {
+      return res.status(404).json({ error: 'User with that email not found.' });
+    }
+    receiverId = target.id;
+  }
 
   if (!receiverId) {
-    return res.status(400).json({ error: 'receiverId is required.' });
+    return res.status(400).json({ error: 'Could not resolve receiver.' });
   }
 
   if (receiverId === user.userId) {
@@ -199,141 +395,7 @@ router.post('/request', async (req: RequestWithUser, res: Response) => {
   }
 });
 
-router.post('/accept', async (req: RequestWithUser, res: Response) => {
-  const user = req.user!;
-  const { requestId } = req.body;
 
-  if (!requestId) return res.status(400).json({ error: 'requestId required.' });
-
-  try {
-    const request = await prisma.friendRequest.findUnique({ where: { id: requestId } });
-    if (!request || request.receiverId !== user.userId || request.status !== 'PENDING') {
-      return res.status(400).json({ error: 'Invalid or unauthorized friend request.' });
-    }
-
-    await prisma.friendRequest.update({
-      where: { id: requestId },
-      data: { status: 'ACCEPTED' }
-    });
-
-    await prisma.friend.create({
-      data: {
-        userId1: request.senderId,
-        userId2: request.receiverId,
-        status: 'ACCEPTED'
-      }
-    });
-
-    let chatRoom = await prisma.chatRoom.findFirst({
-      where: {
-        type: 'private',
-        members: {
-          every: {
-            userId: { in: [request.senderId, request.receiverId] }
-          }
-        }
-      }
-    });
-
-    if (!chatRoom) {
-      chatRoom = await prisma.chatRoom.create({
-        data: {
-          type: 'private',
-          members: {
-            create: [
-              { userId: request.senderId },
-              { userId: request.receiverId }
-            ]
-          }
-        }
-      });
-    }
-
-    const io = req.app.get('io');
-    const senderSocketId = await MatchmakerService.getActiveSocket(request.senderId);
-    if (senderSocketId && io) {
-      const receiverInfo = await prisma.user.findUnique({
-        where: { id: user.userId },
-        select: { id: true, email: true, displayName: true, avatarUrl: true, level: true, status: true }
-      });
-      io.to(senderSocketId).emit('friend:request_accepted', {
-        requestId: request.id,
-        chatRoomId: chatRoom.id,
-        friend: receiverInfo
-      });
-    }
-
-    const receiverInfo = await prisma.user.findUnique({
-      where: { id: user.userId },
-      select: { id: true, email: true, displayName: true, avatarUrl: true, level: true, status: true }
-    });
-
-    return res.json({
-      success: true,
-      chatRoomId: chatRoom.id,
-      friend: receiverInfo
-    });
-  } catch (error) {
-    console.error('Accept request error:', error);
-    return res.status(500).json({ error: 'Failed to accept request' });
-  }
-});
-
-router.post('/reject', async (req: RequestWithUser, res: Response) => {
-  const user = req.user!;
-  const { requestId } = req.body;
-
-  if (!requestId) return res.status(400).json({ error: 'requestId required.' });
-
-  try {
-    const request = await prisma.friendRequest.findUnique({ where: { id: requestId } });
-    if (!request || request.receiverId !== user.userId || request.status !== 'PENDING') {
-      return res.status(400).json({ error: 'Invalid or unauthorized request.' });
-    }
-
-    await prisma.friendRequest.update({
-      where: { id: requestId },
-      data: { status: 'REJECTED' }
-    });
-
-    const io = req.app.get('io');
-    const senderSocketId = await MatchmakerService.getActiveSocket(request.senderId);
-    if (senderSocketId && io) {
-      io.to(senderSocketId).emit('friend:request_rejected', {
-        requestId: request.id
-      });
-    }
-
-    return res.json({ success: true });
-  } catch (error) {
-    console.error('Reject request error:', error);
-    return res.status(500).json({ error: 'Failed to reject request' });
-  }
-});
-
-router.post('/cancel', async (req: RequestWithUser, res: Response) => {
-  const user = req.user!;
-  const { requestId } = req.body;
-
-  if (!requestId) return res.status(400).json({ error: 'requestId required.' });
-
-  try {
-    const request = await prisma.friendRequest.findUnique({ where: { id: requestId } });
-    if (!request || request.senderId !== user.userId || request.status !== 'PENDING') {
-      return res.status(400).json({ error: 'Invalid or unauthorized request.' });
-    }
-
-    await prisma.friendRequest.update({
-      where: { id: requestId },
-      data: { status: 'CANCELLED' }
-    });
-
-    return res.json({ success: true });
-  } catch (error) {
-    console.error('Cancel request error:', error);
-    return res.status(500).json({ error: 'Failed to cancel request' });
-  }
-});
 
 router.delete('/:friendId', async (req: RequestWithUser, res: Response) => {
   const user = req.user!;
