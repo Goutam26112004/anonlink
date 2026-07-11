@@ -76,9 +76,33 @@ router.post('/guest', async (req, res) => {
  * Register User
  */
 router.post('/register', async (req, res) => {
-  const { email, password, captchaToken } = req.body;
+  const {
+    email,
+    password,
+    captchaToken,
+    fullName,
+    displayName,
+    username,
+    ageRange,
+    gender,
+    dateOfBirth,
+    marketingEmails
+  } = req.body;
+
   if (!email || !password || password.length < 6) {
     return res.status(400).json({ error: 'Email and valid password (min 6 chars) are required.' });
+  }
+
+  if (!fullName || !displayName || !username) {
+    return res.status(400).json({ error: 'Full name, display name, and username are required.' });
+  }
+
+  if (username && username.length < 3) {
+    return res.status(400).json({ error: 'Username must be at least 3 characters.' });
+  }
+
+  if (!ageRange || !gender) {
+    return res.status(400).json({ error: 'Age range and gender are required.' });
   }
 
   const captchaResult = await verifyCaptcha(captchaToken || '');
@@ -87,9 +111,16 @@ router.post('/register', async (req, res) => {
   }
 
   try {
-    const existing = await prisma.user.findUnique({ where: { email } });
-    if (existing) {
+    const existingEmail = await prisma.user.findUnique({ where: { email } });
+    if (existingEmail) {
       return res.status(409).json({ error: 'Email already registered.' });
+    }
+
+    if (username) {
+      const existingUsername = await prisma.user.findUnique({ where: { username } });
+      if (existingUsername) {
+        return res.status(409).json({ error: 'Username already taken.' });
+      }
     }
 
     const passwordHash = await argon2.hash(password);
@@ -99,15 +130,27 @@ router.post('/register', async (req, res) => {
       data: {
         email,
         passwordHash,
+        fullName: fullName || null,
+        username: username || null,
+        displayName: displayName || null,
+        dateOfBirth: dateOfBirth ? new Date(dateOfBirth) : null,
         registrationType: 'EMAIL',
         roleId,
         settings: {
           create: {
             theme: 'dark',
-            languagePref: 'en'
+            languagePref: 'en',
+            marketingEmails: marketingEmails === true
+          }
+        },
+        onboarding: {
+          create: {
+            ageRange: ageRange as any,
+            gender: gender as any
           }
         }
-      }
+      },
+      include: { settings: true, onboarding: true }
     });
 
     const token = generateToken({
@@ -123,11 +166,14 @@ router.post('/register', async (req, res) => {
       user: {
         userId: newUser.id,
         email: newUser.email,
+        fullName: newUser.fullName,
+        username: newUser.username,
+        displayName: newUser.displayName,
         registrationType: 'EMAIL',
         userType: 'FREE',
         reputationScore: 100,
         level: 1,
-        onboardingComplete: false
+        onboardingComplete: true
       }
     });
   } catch (error) {

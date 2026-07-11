@@ -86,7 +86,10 @@ model User {
   authProvider       String?           @default("email") @map("auth_provider")
   linkedProviders    String[]          @default([]) @map("linked_providers")
   avatarUrl          String?           @map("avatar_url")
+  fullName           String?           @map("full_name")
+  username           String?           @unique
   displayName        String?           @map("display_name")
+  dateOfBirth        DateTime?         @map("date_of_birth")
   bio                String?           @default("")
   status             UserStatus        @default(OFFLINE) @map("status")
   lastSeen           DateTime          @default(now()) @map("last_seen")
@@ -298,6 +301,7 @@ model UserSettings {
   notificationsEnabled Boolean @default(true) @map("notifications_enabled")
   showLastSeen        Boolean  @default(true) @map("show_last_seen")
   showOnlineStatus    Boolean  @default(true) @map("show_online_status")
+  marketingEmails     Boolean  @default(false) @map("marketing_emails")
 
   @@map("user_settings")
 }

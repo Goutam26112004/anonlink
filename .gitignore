@@ -28,8 +28,12 @@ tmp/
 *.key
 *.pem
 *.sql
-*.sh
 *.tgz
+
+# Deploy artifacts
+images.tar
+deploy.tar.gz
+frontend-deploy.tar.gz
 
 # Certbot certificates
 certbot/

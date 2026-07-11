@@ -84,10 +84,10 @@ npx tsx tests/subscription.test.ts
 
 ## 5. Deployment Guide
 Deploy to the target VM using SSH:
-1. Ensure the private key (`Downloads/ssh-key-2026-07-07.key`) is present.
-2. Upload changed backend/frontend/shared files.
-3. SSH into the VM, pull changes, run `docker-compose down`, rebuild backend/frontend, and run migrations.
-4. Run the seed query to populate active plans inside `subscription_plans`.
+1. Ensure the private key (`~/.ssh/anonlink.key`) is present.
+2. Run `./scripts/deploy.sh` to build locally and deploy to VM.
+3. Use `./scripts/deploy.sh --dry-run` to preview without changes.
+4. Use `./scripts/deploy.sh --service backend` to deploy only backend.
 
 ---
 
@@ -96,12 +96,7 @@ Deploy to the target VM using SSH:
 ### Port Conflict Errors
 * **Symptom**: `Bind for 0.0.0.0:80 failed: port is already allocated` or `5432 failed`.
 * **Fix**: Locate and stop local processes using the target ports:
-  ```powershell
-  # Windows
-  Stop-Service -Name "postgresql-x64-16" -Force
-  ```
   ```bash
-  # Linux
   sudo systemctl stop postgresql
   sudo systemctl stop nginx
   ```

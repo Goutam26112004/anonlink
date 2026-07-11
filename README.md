@@ -68,13 +68,13 @@ npx tsx tests/subscription.test.ts
 
 ## 6. Handover Documentation
 Complete developer guides are available in the `/docs` directory:
-* **[PROJECT_CONTEXT.md](file:///C:/Users/Gouta/.gemini/antigravity-ide/scratch/anon-chat-platform/docs/PROJECT_CONTEXT.md)**: System design and technology choices.
-* **[AI_CONTEXT.md](file:///C:/Users/Gouta/.gemini/antigravity-ide/scratch/anon-chat-platform/docs/AI_CONTEXT.md)**: Standard conventions and guidelines for AI coding assistants.
-* **[DEVELOPER_GUIDE.md](file:///C:/Users/Gouta/.gemini/antigravity-ide/scratch/anon-chat-platform/docs/DEVELOPER_GUIDE.md)**: Local configuration and setup steps.
-* **[ARCHITECTURE.md](file:///C:/Users/Gouta/.gemini/antigravity-ide/scratch/anon-chat-platform/docs/ARCHITECTURE.md)**: Mermaid charts and connection mappings.
-* **[API_REFERENCE.md](file:///C:/Users/Gouta/.gemini/antigravity-ide/scratch/anon-chat-platform/docs/API_REFERENCE.md)**: Express REST api specifications.
-* **[SOCKET_EVENTS.md](file:///C:/Users/Gouta/.gemini/antigravity-ide/scratch/anon-chat-platform/docs/SOCKET_EVENTS.md)**: Socket.IO event reference.
-* **[DATABASE_SCHEMA.md](file:///C:/Users/Gouta/.gemini/antigravity-ide/scratch/anon-chat-platform/docs/DATABASE_SCHEMA.md)**: Prisma PostgreSQL tables and indexes.
+* **[PROJECT_CONTEXT.md](./docs/PROJECT_CONTEXT.md)**: System design and technology choices.
+* **[AI_CONTEXT.md](./docs/AI_CONTEXT.md)**: Standard conventions and guidelines for AI coding assistants.
+* **[DEVELOPER_GUIDE.md](./docs/DEVELOPER_GUIDE.md)**: Local configuration and setup steps.
+* **[ARCHITECTURE.md](./docs/ARCHITECTURE.md)**: Mermaid charts and connection mappings.
+* **[API_REFERENCE.md](./docs/API_REFERENCE.md)**: Express REST api specifications.
+* **[SOCKET_EVENTS.md](./docs/SOCKET_EVENTS.md)**: Socket.IO event reference.
+* **[DATABASE_SCHEMA.md](./docs/DATABASE_SCHEMA.md)**: Prisma PostgreSQL tables and indexes.
 
 ---
 

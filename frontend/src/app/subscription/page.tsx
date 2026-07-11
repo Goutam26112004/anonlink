@@ -3,7 +3,9 @@
 import React, { useState, useEffect, useCallback } from "react";
 import { useRouter } from "next/navigation";
 import { useChatStore } from "../../store/chatStore";
-import { Crown, Clock, Zap, Mic, Video, Check, X, ArrowLeft, RefreshCw, AlertCircle } from "lucide-react";
+import { motion, AnimatePresence } from "framer-motion";
+import { Crown, Clock, Check, X, ArrowLeft, RefreshCw, AlertCircle } from "lucide-react";
+import { NetworkGraph } from "../../components/illustrations/NetworkGraph";
 
 const BACKEND_URL = process.env.NEXT_PUBLIC_BACKEND_URL || "http://localhost:4000";
 
@@ -27,15 +29,24 @@ function formatCountdown(expiresAt: string) {
   return `${mins}m remaining`;
 }
 
-const PLAN_META: Record<string, { label: string; badge: string; color: string }> = {
-  DAILY:   { label: "Daily",   badge: "Try it out",  color: "from-slate-500 to-slate-600" },
-  WEEKLY:  { label: "Weekly",  badge: "Most Popular", color: "from-indigo-600 to-purple-600" },
-  MONTHLY: { label: "Monthly", badge: "Best Value",  color: "from-purple-600 to-pink-600" },
+const PLAN_META: Record<string, { label: string; badge: string; gradient: string }> = {
+  DAILY:   { label: "Daily",   badge: "Try it out",  gradient: "from-slate-500 to-slate-600" },
+  WEEKLY:  { label: "Weekly",  badge: "Most Popular", gradient: "from-[var(--brand)] to-[var(--lavender)]" },
+  MONTHLY: { label: "Monthly", badge: "Best Value",  gradient: "from-[var(--lavender)] to-[var(--accent)]" },
 };
+
+const ALL_FEATURES = [
+  { label: "Text Chat", ok: true },
+  { label: "Image Sharing (60s)", ok: true },
+  { label: "Report & Block", ok: true },
+  { label: "Voice Chat", ok: true },
+  { label: "Video Chat", ok: true },
+  { label: "Gender Filter", ok: true },
+];
 
 export default function SubscriptionPage() {
   const router = useRouter();
-  const { token, theme } = useChatStore();
+  const { token } = useChatStore();
   const [plans, setPlans] = useState<Plan[]>([]);
   const [active, setActive] = useState<Subscription | null>(null);
   const [history, setHistory] = useState<Subscription[]>([]);
@@ -67,7 +78,6 @@ export default function SubscriptionPage() {
 
   useEffect(() => { fetchData(); }, [fetchData]);
 
-  // Live countdown
   useEffect(() => {
     if (!remainingSeconds) return;
     const timer = setInterval(() => setRemainingSeconds(s => s !== null && s > 0 ? s - 1 : 0), 1000);
@@ -79,157 +89,217 @@ export default function SubscriptionPage() {
     setShowComingSoon(true);
   };
 
-  const isDark = theme === "dark";
-  const bg = isDark ? "bg-[#0B0F19]" : "bg-[#F8FAFC]";
-  const text = isDark ? "text-white" : "text-slate-900";
-  const sub = isDark ? "text-slate-400" : "text-slate-500";
-  const card = isDark ? "bg-[#1E293B]/70 border-white/5" : "bg-white border-slate-200";
-
   if (loading) return (
-    <div className={`min-h-screen ${bg} ${text} flex items-center justify-center`}>
-      <div className="flex items-center gap-3 text-indigo-400"><RefreshCw className="w-5 h-5 animate-spin" /> Loading subscription...</div>
+    <div className="min-h-screen bg-[var(--bg-primary)] text-[var(--text-primary)] flex items-center justify-center">
+      <div className="flex items-center gap-3 text-[var(--brand)]"><RefreshCw className="w-5 h-5 animate-spin" /> Loading subscription...</div>
     </div>
   );
 
+  const containerVariants = {
+    hidden: { opacity: 0 },
+    show: { opacity: 1, transition: { staggerChildren: 0.1 } },
+  };
+  const cardVariants = {
+    hidden: { opacity: 0, y: 20 },
+    show: { opacity: 1, y: 0 },
+  };
+
   return (
-    <div className={`min-h-screen ${bg} ${text}`}>
-      {/* Coming Soon Modal */}
-      {showComingSoon && (
-        <div className="fixed inset-0 bg-black/60 backdrop-blur-sm z-50 flex items-center justify-center p-4">
-          <div className={`${card} border rounded-3xl p-8 max-w-sm w-full text-center shadow-2xl`}>
-            <div className="w-16 h-16 bg-indigo-600/20 rounded-2xl flex items-center justify-center mx-auto mb-4">
-              <Crown className="w-8 h-8 text-indigo-400" />
-            </div>
-            <h3 className="text-xl font-bold mb-2">Coming Soon!</h3>
-            <p className={`text-sm mb-4 ${sub}`}>
-              Payment for the <strong>{selectedPlanName}</strong> plan is being set up.
-              Contact the admin for manual activation.
-            </p>
-            <div className={`p-3 rounded-xl text-xs mb-6 ${isDark ? "bg-amber-500/10 text-amber-400 border border-amber-500/20" : "bg-amber-50 text-amber-700 border border-amber-200"}`}>
-              <AlertCircle className="w-4 h-4 inline mr-1" />
-              Payment gateway integration coming in a future update.
-            </div>
-            <button onClick={() => setShowComingSoon(false)}
-              className="w-full py-3 rounded-xl bg-gradient-to-r from-indigo-600 to-purple-600 text-white font-bold hover:brightness-110 transition-all">
-              Got it
-            </button>
-          </div>
-        </div>
-      )}
+    <div className="min-h-screen bg-[var(--bg-primary)] text-[var(--text-primary)] relative">
+      <NetworkGraph className="absolute inset-0 opacity-[0.03] pointer-events-none" />
 
-      <div className="max-w-4xl mx-auto px-6 py-12">
-        <button onClick={() => router.push("/dashboard")} className={`flex items-center gap-2 text-sm ${sub} hover:text-indigo-400 transition-colors mb-8`}>
+      <AnimatePresence>
+        {showComingSoon && (
+          <motion.div
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
+            className="fixed inset-0 bg-black/60 backdrop-blur-sm z-50 flex items-center justify-center p-4"
+          >
+            <motion.div
+              initial={{ opacity: 0, scale: 0.9, y: 20 }}
+              animate={{ opacity: 1, scale: 1, y: 0 }}
+              exit={{ opacity: 0, scale: 0.9, y: 20 }}
+              className="glass-heavy rounded-3xl p-8 max-w-sm w-full text-center shadow-[var(--shadow-xl)] border border-[var(--border-secondary)]"
+            >
+              <div className="w-16 h-16 rounded-2xl bg-gradient-to-br from-[var(--brand)] to-[var(--lavender)] flex items-center justify-center mx-auto mb-4 shadow-[var(--shadow-glow)]">
+                <Crown className="w-8 h-8 text-white" />
+              </div>
+              <h3 className="text-xl font-bold mb-2">Coming Soon!</h3>
+              <p className="text-sm text-[var(--text-secondary)] mb-4">
+                Payment for the <strong>{selectedPlanName}</strong> plan is being set up.
+                Contact the admin for manual activation.
+              </p>
+              <div className="p-3 rounded-xl text-xs mb-6 bg-[var(--warning-subtle)] text-[var(--warning)] border border-[var(--warning)]/20 flex items-start gap-2">
+                <AlertCircle className="w-4 h-4 shrink-0 mt-0.5" />
+                <span>Payment gateway integration coming in a future update.</span>
+              </div>
+              <button onClick={() => setShowComingSoon(false)}
+                className="w-full py-3 rounded-xl btn-primary text-base">
+                Got it
+              </button>
+            </motion.div>
+          </motion.div>
+        )}
+      </AnimatePresence>
+
+      <div className="max-w-4xl mx-auto px-6 py-12 relative z-10">
+        <motion.button
+          initial={{ opacity: 0, x: -10 }}
+          animate={{ opacity: 1, x: 0 }}
+          onClick={() => router.push("/dashboard")}
+          className="flex items-center gap-2 text-sm text-[var(--text-secondary)] hover:text-[var(--brand)] transition-colors mb-8"
+        >
           <ArrowLeft className="w-4 h-4" /> Back to Dashboard
-        </button>
+        </motion.button>
 
-        <div className="mb-10">
-          <h1 className="text-3xl font-extrabold mb-2">Subscription Plans</h1>
-          <p className={sub}>Unlock voice chat, video chat, and gender preference matching.</p>
-        </div>
+        <motion.div
+          initial={{ opacity: 0, y: 10 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ duration: 0.4 }}
+          className="mb-10"
+        >
+          <h1 className="heading-display text-3xl mb-2">Subscription Plans</h1>
+          <p className="text-[var(--text-secondary)]">Unlock voice chat, video chat, and gender preference matching.</p>
+        </motion.div>
 
-        {/* Active Subscription Status Card */}
-        {active ? (
-          <div className={`border rounded-2xl p-6 mb-10 bg-gradient-to-r from-indigo-600/10 to-purple-600/10 ${isDark ? "border-indigo-500/20" : "border-indigo-200"}`}>
-            <div className="flex items-center justify-between flex-wrap gap-4">
+        <AnimatePresence mode="wait">
+          {active ? (
+            <motion.div
+              key="active"
+              initial={{ opacity: 0, y: 10 }}
+              animate={{ opacity: 1, y: 0 }}
+              exit={{ opacity: 0, y: -10 }}
+              className="glass-card rounded-2xl p-6 mb-10 border border-[var(--brand)]/30 relative overflow-hidden"
+            >
+              <div className="absolute inset-0 bg-gradient-to-r from-[var(--brand-subtle)] to-[var(--lavender-subtle)] opacity-60" />
+              <div className="relative z-10 flex items-center justify-between flex-wrap gap-4">
+                <div className="flex items-center gap-3">
+                  <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-[var(--brand)] to-[var(--lavender)] flex items-center justify-center shadow-[var(--shadow-glow)]">
+                    <Crown className="w-5 h-5 text-white" />
+                  </div>
+                  <div>
+                    <p className="font-bold">{PLAN_META[active.plan.type]?.label} Plan � Active</p>
+                    <p className="text-sm text-[var(--text-secondary)]">{active.grantedByAdmin ? "Granted by Admin" : `Purchased: ${new Date(active.purchasedAt).toLocaleDateString()}`}</p>
+                  </div>
+                </div>
+                <div className="text-right">
+                  <p className="font-bold text-[var(--brand)]">{formatCountdown(active.expiresAt)}</p>
+                  <p className="text-xs text-[var(--text-secondary)]">Expires: {new Date(active.expiresAt).toLocaleString()}</p>
+                </div>
+              </div>
+              {remainingSeconds !== null && remainingSeconds < 86400 && (
+                <motion.div
+                  initial={{ opacity: 0, height: 0 }}
+                  animate={{ opacity: 1, height: "auto" }}
+                  className={`mt-4 text-sm font-semibold ${remainingSeconds < 3600 ? "text-[var(--danger)]" : "text-[var(--warning)]"} relative z-10`}
+                >
+                  ?? Subscription expiring soon! Renew to keep your features.
+                </motion.div>
+              )}
+            </motion.div>
+          ) : (
+            <motion.div
+              key="free"
+              initial={{ opacity: 0, y: 10 }}
+              animate={{ opacity: 1, y: 0 }}
+              exit={{ opacity: 0, y: -10 }}
+              className="glass-card rounded-2xl p-6 mb-10"
+            >
               <div className="flex items-center gap-3">
-                <div className="w-10 h-10 rounded-xl bg-indigo-600/20 flex items-center justify-center">
-                  <Crown className="w-5 h-5 text-indigo-400" />
+                <div className="w-10 h-10 rounded-xl bg-[var(--bg-tertiary)] flex items-center justify-center">
+                  <Clock className="w-5 h-5 text-[var(--text-muted)]" />
                 </div>
                 <div>
-                  <p className="font-bold">{PLAN_META[active.plan.type]?.label} Plan — Active</p>
-                  <p className={`text-sm ${sub}`}>{active.grantedByAdmin ? "Granted by Admin" : `Purchased: ${new Date(active.purchasedAt).toLocaleDateString()}`}</p>
+                  <p className="font-bold">Free Plan</p>
+                  <p className="text-sm text-[var(--text-secondary)]">Text chat and image sharing only. Upgrade for voice &amp; video.</p>
                 </div>
               </div>
-              <div className="text-right">
-                <p className="font-bold text-indigo-400">{formatCountdown(active.expiresAt)}</p>
-                <p className={`text-xs ${sub}`}>Expires: {new Date(active.expiresAt).toLocaleString()}</p>
-              </div>
-            </div>
-            {remainingSeconds !== null && remainingSeconds < 86400 && (
-              <div className={`mt-4 text-sm font-semibold ${remainingSeconds < 3600 ? "text-rose-400" : "text-amber-400"}`}>
-                ⚠️ Subscription expiring soon! Renew to keep your features.
-              </div>
-            )}
-          </div>
-        ) : (
-          <div className={`border rounded-2xl p-6 mb-10 ${card}`}>
-            <div className="flex items-center gap-3">
-              <div className="w-10 h-10 rounded-xl bg-slate-500/10 flex items-center justify-center">
-                <Clock className="w-5 h-5 text-slate-400" />
-              </div>
-              <div>
-                <p className="font-bold">Free Plan</p>
-                <p className={`text-sm ${sub}`}>Text chat and image sharing only. Upgrade for voice &amp; video.</p>
-              </div>
-            </div>
-          </div>
-        )}
+            </motion.div>
+          )}
+        </AnimatePresence>
 
-        {/* Plan Cards */}
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-12">
+        <motion.div
+          variants={containerVariants}
+          initial="hidden"
+          animate="show"
+          className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-12"
+        >
           {plans.map((plan) => {
-            const meta = PLAN_META[plan.type] || { label: plan.type, badge: "", color: "from-slate-500 to-slate-600" };
+            const meta = PLAN_META[plan.type] || { label: plan.type, badge: "", gradient: "from-slate-500 to-slate-600" };
             const isCurrentPlan = active?.plan?.type === plan.type;
             return (
-              <div key={plan.id} className={`relative border rounded-2xl p-6 flex flex-col ${card} ${isCurrentPlan ? (isDark ? "border-indigo-500/50" : "border-indigo-400") : ""}`}>
+              <motion.div
+                key={plan.id}
+                variants={cardVariants}
+                className={`glass-card rounded-2xl p-6 flex flex-col relative overflow-hidden ${
+                  isCurrentPlan ? "border-[var(--brand)]/40" : ""
+                }`}
+              >
                 {meta.badge && (
-                  <span className={`absolute -top-3 left-1/2 -translate-x-1/2 px-3 py-1 rounded-full text-xs font-bold bg-gradient-to-r ${meta.color} text-white`}>
+                  <span className={`absolute -top-3 left-1/2 -translate-x-1/2 px-4 py-1 rounded-full text-xs font-bold bg-gradient-to-r ${meta.gradient} text-white shadow-lg z-10`}>
                     {meta.badge}
                   </span>
                 )}
-                <div className={`w-10 h-10 rounded-xl bg-gradient-to-r ${meta.color} flex items-center justify-center mb-4`}>
+                <div className={`w-10 h-10 rounded-xl bg-gradient-to-r ${meta.gradient} flex items-center justify-center mb-4`}>
                   <Crown className="w-5 h-5 text-white" />
                 </div>
                 <h3 className="text-xl font-bold mb-1">{meta.label}</h3>
-                <p className={`text-3xl font-extrabold mb-1`}>₹{plan.priceInr}</p>
-                <p className={`text-sm mb-6 ${sub}`}>{plan.validityDays} day{plan.validityDays > 1 ? "s" : ""} access</p>
+                <p className="text-3xl font-extrabold mb-1">?{plan.priceInr}</p>
+                <p className="text-sm text-[var(--text-secondary)] mb-6">{plan.validityDays} day{plan.validityDays > 1 ? "s" : ""} access</p>
                 <div className="space-y-2 mb-6 flex-1">
-                  {[
-                    { label: "Text Chat", ok: true },
-                    { label: "Image Sharing (60s)", ok: true },
-                    { label: "Report & Block", ok: true },
-                    { label: "Voice Chat", ok: plan.isVoiceEnabled },
-                    { label: "Video Chat", ok: plan.isVideoEnabled },
-                    { label: "Gender Filter", ok: true },
-                  ].map((feat) => (
-                    <div key={feat.label} className={`flex items-center gap-2 text-sm ${feat.ok ? "" : sub}`}>
-                      {feat.ok ? <Check className="w-4 h-4 text-emerald-400 shrink-0" /> : <X className="w-4 h-4 text-slate-600 shrink-0" />}
-                      {feat.label}
-                    </div>
-                  ))}
+                  {ALL_FEATURES.map((feat) => {
+                    const enabled = feat.label === "Voice Chat" ? plan.isVoiceEnabled :
+                      feat.label === "Video Chat" ? plan.isVideoEnabled : feat.ok;
+                    return (
+                      <div key={feat.label} className={`flex items-center gap-2 text-sm ${enabled ? "" : "text-[var(--text-muted)]"}`}>
+                        {enabled
+                          ? <Check className="w-4 h-4 text-[var(--accent)] shrink-0" />
+                          : <X className="w-4 h-4 text-[var(--text-muted)] shrink-0" />
+                        }
+                        {feat.label}
+                      </div>
+                    );
+                  })}
                 </div>
-                <button
+                <motion.button
+                  whileHover={!isCurrentPlan ? { scale: 1.02 } : {}}
+                  whileTap={!isCurrentPlan ? { scale: 0.98 } : {}}
                   onClick={() => handleUpgrade(plan)}
                   disabled={isCurrentPlan}
                   className={`w-full py-3 rounded-xl font-bold text-sm transition-all ${
                     isCurrentPlan
-                      ? "bg-indigo-600/20 text-indigo-400 cursor-default"
-                      : `bg-gradient-to-r ${meta.color} text-white hover:brightness-110 cursor-pointer active:scale-95`
+                      ? "bg-[var(--brand-subtle)] text-[var(--brand)] cursor-default"
+                      : `bg-gradient-to-r ${meta.gradient} text-white hover:brightness-110 cursor-pointer`
                   }`}
                 >
-                  {isCurrentPlan ? "✓ Current Plan" : "Upgrade"}
-                </button>
-              </div>
+                  {isCurrentPlan ? "? Current Plan" : "Upgrade"}
+                </motion.button>
+              </motion.div>
             );
           })}
-        </div>
+        </motion.div>
 
-        {/* Feature Comparison */}
-        <div className={`border rounded-2xl overflow-hidden ${card}`}>
-          <div className="p-6 border-b border-white/5">
+        <motion.div
+          initial={{ opacity: 0, y: 10 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ delay: 0.3, duration: 0.4 }}
+          className="glass-card rounded-2xl overflow-hidden"
+        >
+          <div className="p-6 border-b border-[var(--border-primary)]">
             <h2 className="text-xl font-bold">Feature Comparison</h2>
           </div>
           <div className="overflow-x-auto">
             <table className="w-full text-sm">
               <thead>
-                <tr className={isDark ? "bg-white/5" : "bg-slate-50"}>
+                <tr className="bg-[var(--bg-tertiary)]">
                   <th className="text-left p-4 font-semibold">Feature</th>
                   <th className="text-center p-4 font-semibold">Guest</th>
                   <th className="text-center p-4 font-semibold">Free</th>
-                  <th className="text-center p-4 font-semibold text-indigo-400">Paid</th>
+                  <th className="text-center p-4 font-semibold text-[var(--brand)]">Paid</th>
                 </tr>
               </thead>
-              <tbody className={`divide-y ${isDark ? "divide-white/5" : "divide-slate-100"}`}>
+              <tbody className="divide-y divide-[var(--border-primary)]">
                 {[
                   { feature: "Anonymous Text Chat", guest: true, free: true, paid: true },
                   { feature: "Temporary Image Sharing", guest: true, free: true, paid: true },
@@ -240,11 +310,11 @@ export default function SubscriptionPage() {
                   { feature: "Gender Preference Filter", guest: false, free: false, paid: true },
                   { feature: "Advanced Matching", guest: false, free: false, paid: true },
                 ].map((row) => (
-                  <tr key={row.feature} className={isDark ? "hover:bg-white/5" : "hover:bg-slate-50"}>
+                  <tr key={row.feature} className="hover:bg-[var(--bg-tertiary)] transition-colors">
                     <td className="p-4 font-medium">{row.feature}</td>
                     {[row.guest, row.free, row.paid].map((v, i) => (
                       <td key={i} className="p-4 text-center">
-                        {v ? <Check className="w-4 h-4 text-emerald-400 mx-auto" /> : <X className="w-4 h-4 text-slate-600 mx-auto" />}
+                        {v ? <Check className="w-4 h-4 text-[var(--accent)] mx-auto" /> : <X className="w-4 h-4 text-[var(--text-muted)] mx-auto" />}
                       </td>
                     ))}
                   </tr>
@@ -252,30 +322,40 @@ export default function SubscriptionPage() {
               </tbody>
             </table>
           </div>
-        </div>
+        </motion.div>
 
-        {/* Subscription History */}
         {history.length > 0 && (
-          <div className={`border rounded-2xl mt-8 overflow-hidden ${card}`}>
-            <div className="p-6 border-b border-white/5">
+          <motion.div
+            initial={{ opacity: 0, y: 10 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ delay: 0.4, duration: 0.4 }}
+            className="glass-card rounded-2xl mt-8 overflow-hidden"
+          >
+            <div className="p-6 border-b border-[var(--border-primary)]">
               <h2 className="text-xl font-bold">Subscription History</h2>
             </div>
-            <div className="divide-y divide-white/5">
-              {history.map((h) => (
-                <div key={h.id} className="p-4 flex items-center justify-between">
+            <div className="divide-y divide-[var(--border-primary)]">
+              {history.map((h, i) => (
+                <motion.div
+                  key={h.id}
+                  initial={{ opacity: 0, x: -10 }}
+                  animate={{ opacity: 1, x: 0 }}
+                  transition={{ delay: i * 0.05, duration: 0.2 }}
+                  className="p-4 flex items-center justify-between hover:bg-[var(--bg-tertiary)] transition-colors"
+                >
                   <div>
                     <p className="font-semibold">{PLAN_META[h.plan.type]?.label || h.plan.type} Plan</p>
-                    <p className={`text-xs ${sub}`}>{new Date(h.purchasedAt).toLocaleDateString()} → {new Date(h.expiresAt).toLocaleDateString()}</p>
+                    <p className="text-xs text-[var(--text-secondary)]">{new Date(h.purchasedAt).toLocaleDateString()} ? {new Date(h.expiresAt).toLocaleDateString()}</p>
                   </div>
                   <span className={`text-xs font-bold px-3 py-1 rounded-full ${
-                    h.status === "ACTIVE" ? "bg-emerald-500/20 text-emerald-400" :
-                    h.status === "EXPIRED" ? "bg-slate-500/20 text-slate-400" :
-                    "bg-rose-500/20 text-rose-400"
+                    h.status === "ACTIVE" ? "bg-[var(--accent-subtle)] text-[var(--accent)]" :
+                    h.status === "EXPIRED" ? "bg-[var(--text-muted)]/10 text-[var(--text-muted)]" :
+                    "bg-[var(--danger-subtle)] text-[var(--danger)]"
                   }`}>{h.status}</span>
-                </div>
+                </motion.div>
               ))}
             </div>
-          </div>
+          </motion.div>
         )}
       </div>
     </div>
