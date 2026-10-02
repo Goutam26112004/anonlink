@@ -1,0 +1,58 @@
+{
+  "name": "anon-link",
+  "version": "1.0.0",
+  "description": "State-of-the-art anonymous real-time communication platform (Text, Voice, Video).",
+  "technologies": [
+    "TypeScript",
+    "Node.js",
+    "Express.js",
+    "Next.js",
+    "Socket.IO",
+    "WebRTC",
+    "Prisma ORM",
+    "PostgreSQL",
+    "Redis",
+    "Docker",
+    "Nginx",
+    "CoTURN"
+  ],
+  "monorepoWorkspaces": [
+    "backend",
+    "frontend",
+    "packages/types"
+  ],
+  "services": {
+    "backend": {
+      "port": 4000,
+      "src": "./backend",
+      "main": "dist/index.js",
+      "build": "npm run build --workspace=backend",
+      "dev": "npm run dev --workspace=backend",
+      "test": "npx tsx tests/onboarding.test.ts"
+    },
+    "frontend": {
+      "port": 3000,
+      "src": "./frontend",
+      "build": "npm run build --workspace=frontend",
+      "dev": "npm run dev --workspace=frontend"
+    },
+    "nginx": {
+      "ports": [80, 443],
+      "config": "./nginx/nginx.conf"
+    },
+    "coturn": {
+      "port": 3478,
+      "config": "./coturn/turnserver.conf"
+    }
+  },
+  "features": [
+    "Privacy-first onboarding flow",
+    "Secure Google OAuth 2.0 and session restoration cookies",
+    "Interest-based matchmaking with starvation recovery",
+    "Mute, Block, Report, and Shadow banning queues",
+    "Mock billing integration factory with Daily/Weekly/Monthly plans",
+    "WebRTC Voice, Video, and Screen sharing match gates",
+    "60-second Ephemeral media upload with screenshot protection",
+    "Admin statistics, manual grants, and global toggles console"
+  ]
+}

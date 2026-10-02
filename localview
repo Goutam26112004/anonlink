@@ -1,0 +1,178 @@
+================================================================================
+ ANONLINK — LOCAL DEVELOPMENT PREVIEW WORKFLOW
+================================================================================
+
+PROJECT: AnonLink — Secure Anonymous Chat Platform
+LOCATION: /home/incognito/Code/anonlink
+STACK:
+  - Frontend: Next.js 16.2.10 (App Router, Turbopack) + Tailwind + Zustand + Socket.IO client
+  - Backend: Express + Prisma + Socket.IO + Redis + PostgreSQL + WebRTC (coturn TURN)
+  - Deployment: Docker on single VM (132.226.190.112), nginx reverse proxy, certbot SSL
+  - Live URL: https://anonlink.online
+
+================================================================================
+ 1. PREREQUISITES (one-time setup)
+================================================================================
+
+1a — Start infrastructure (PostgreSQL, Redis, Coturn):
+────────────────────────────────────────────────────────
+  docker compose -f docker-compose.dev.yml up -d
+
+  This starts 3 containers:
+    - anon-chat-db      (PostgreSQL 16, port 5432)
+    - anon-chat-redis   (Redis 7, port 6379)
+    - anon-chat-coturn  (TURN/STUN server, port 3478)
+
+  Default DB credentials:
+    User:     anonuser
+    Password: anonpassword
+    Database: anondb
+
+1b — Install npm dependencies:
+────────────────────────────────
+  npm install
+
+  (npm workspaces — all deps hoisted to root node_modules/)
+
+1c — Create backend/.env:
+───────────────────────────
+  Required file at backend/.env with these values:
+
+    PORT=4000
+    DATABASE_URL="postgresql://anonuser:anonpassword@localhost:5432/anondb"
+    REDIS_URL="redis://localhost:6379"
+    JWT_SECRET="dev-secret-key-123"
+    CLIENT_URL="http://localhost:3000"
+    COTURN_SHARED_SECRET="coturn_dev_secret"
+    TURN_URL="turn:localhost:3478"
+    STUN_URL="stun:localhost:3478"
+    GOOGLE_CLIENT_ID=""
+    GOOGLE_CLIENT_SECRET=""
+    GOOGLE_CALLBACK_URL="http://localhost:4000/api/v1/auth/google/callback"
+    TURNSTILE_SECRET_KEY="1x0000000000000000000000000000000AA"
+
+  NOTES:
+    - Google OAuth will NOT work locally (keys left empty).
+      Use guest/email login for testing.
+    - Turnstile uses test key that allows all requests locally.
+    - DB credentials MUST match docker-compose.dev.yml defaults.
+
+1d — Push Prisma schema to database:
+─────────────────────────────────────
+  cd backend
+  npx prisma db push
+
+  (Creates all tables from prisma/schema.prisma)
+
+1e — Seed subscription plans:
+───────────────────────────────
+  cd backend
+  npx tsx prisma/seed.ts
+
+  Creates 3 plans: Daily (29 INR), Weekly (149 INR), Monthly (399 INR)
+
+================================================================================
+ 2. LOCAL PREVIEW (run each time)
+================================================================================
+
+2a — Ensure infrastructure is running:
+───────────────────────────────────────
+  docker ps  (check anon-chat-db, anon-chat-redis, anon-chat-coturn are UP)
+  If not: docker compose -f docker-compose.dev.yml up -d
+
+2b — Start backend (Terminal 1):
+─────────────────────────────────
+  cd /home/incognito/Code/anonlink/backend
+  npx tsx src/index.ts
+
+  Backend runs on http://localhost:4000
+  Hot-reload: NO (unlike nodemon). Stop and restart after changes.
+  Alternative: Use nodemon with ts-node if ts-node deps are fixed.
+  Health check: curl http://localhost:4000/health
+
+2c — Start frontend (Terminal 2):
+──────────────────────────────────
+  cd /home/incognito/Code/anonlink/frontend
+  npx next dev
+
+  Frontend runs on http://localhost:3000
+  Hot-reload: YES (Next.js Turbopack HMR — instant on save)
+
+2d — Preview:
+─────────────
+  Open http://localhost:3000 in browser.
+
+2e — Stop:
+──────────
+  Kill both dev servers (Ctrl+C in each terminal).
+  To stop infrastructure: docker compose -f docker-compose.dev.yml down
+
+================================================================================
+ 3. IMPORTANT NOTES
+================================================================================
+
+3a — Backend dev script issue:
+  The configured "dev" script uses "nodemon --watch src --ext ts --exec ts-node src/index.ts"
+  but ts-node in backend/node_modules is incomplete due to npm workspaces hoisting.
+  Use "npx tsx src/index.ts" directly instead — tsx works correctly.
+
+3b — Frontend env vars:
+  NEXT_PUBLIC_BACKEND_URL defaults to http://localhost:4000 (defined in frontend/src/lib/api.ts)
+  NEXT_PUBLIC_RECAPTCHA_SITE_KEY defaults to test key (defined in components)
+  NEXT_PUBLIC_TURNSTILE_SITE_KEY defaults to test key (defined in components)
+  No frontend-specific .env file is required for local dev.
+
+3c — Database state:
+  Tables are created via "npx prisma db push" (not migrations).
+  No prisma/migrations directory exists.
+  Seed script populates subscription_plans table only.
+
+3d — Google OAuth:
+  Does NOT work on localhost. Service workers / OAuth redirect URIs
+  must be registered in Google Cloud Console for the production domain.
+  Test the app using guest login or email/password registration.
+
+3e — Port conflicts:
+  Ensure ports 3000 (frontend), 4000 (backend), 5432 (DB), 6379 (Redis),
+  3478 (coturn) are free before starting services.
+
+3f — Existing deployment:
+  Live server: ubuntu@132.226.190.112 (SSH key at ~/.ssh/anonlink.key)
+  Deploy script: ./scripts/deploy.sh [--service frontend|backend|all]
+  See AGENTS.md for full deploy workflow.
+
+================================================================================
+ 4. PROJECT STRUCTURE (key paths)
+================================================================================
+
+  /home/incognito/Code/anonlink/
+  ├── backend/
+  │   ├── src/              — Express app, routes, sockets, services
+  │   ├── prisma/
+  │   │   ├── schema.prisma  — Database schema (all models)
+  │   │   └── seed.ts        — Subscription plan seeds
+  │   └── .env              — Local dev env vars (created by this workflow)
+  ├── frontend/
+  │   ├── src/
+  │   │   ├── app/           — Next.js App Router pages
+  │   │   ├── components/    — React components
+  │   │   └── lib/           — API client, utils
+  │   └── next.config.ts
+  ├── docker-compose.dev.yml  — Local infra (DB, Redis, Coturn)
+  ├── docker-compose.prod.yml — Production services (backend, frontend, nginx)
+  ├── scripts/deploy.sh       — Production deploy script
+  └── .env.production         — Production env vars (secrets)
+
+================================================================================
+ 5. CURRENT STATE (as of last setup)
+================================================================================
+
+  ✅ backend/.env        — Created with dev credentials
+  ✅ Prisma schema       — Pushed to database (all tables created)
+  ✅ Prisma seed         — Subscription plans inserted
+  ❌ Backend server      — NOT running (needs manual start)
+  ❌ Frontend server     — NOT running (needs manual start)
+  ✅ Docker infra        — Was running (check with docker ps)
+  ✅ npm dependencies    — Installed
+
+================================================================================

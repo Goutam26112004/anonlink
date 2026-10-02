@@ -1,0 +1,20 @@
+{
+  "name": "AnonLink - Anonymous Chat, Voice & Video",
+  "short_name": "AnonLink",
+  "description": "Chat anonymously with strangers worldwide. Free text, voice & video chat. No sign-up required. End-to-end encrypted.",
+  "start_url": "/dashboard",
+  "display": "standalone",
+  "background_color": "#0B0D12",
+  "theme_color": "#8B5CF6",
+  "orientation": "portrait",
+  "categories": ["social", "communication"],
+  "lang": "en",
+  "icons": [
+    {
+      "src": "/icon.svg",
+      "sizes": "512x512",
+      "type": "image/svg+xml",
+      "purpose": "any maskable"
+    }
+  ]
+}

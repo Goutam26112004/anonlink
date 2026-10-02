@@ -1,0 +1,101 @@
+(node:3684990) ExperimentalWarning: Watch mode is an experimental feature and might change at any time
+(Use `node --trace-warnings ...` to show where the warning was created)
+Connected to Redis successfully
+Connected to PostgreSQL database successfully via Prisma
+[Scheduler] Started: media cleanup (30s), subscription expiry (5min).
+Backend server running on port 4000
+User connected: c6473ba0-ec40-4a41-83c1-c06a309fad4b (registered: false)
+User connected: f65994de-7e61-4bad-ac38-7a2c66cf0bc2 (registered: false)
+Socket disconnected: cdnk8DLYtxcoLobtAAAB (User: c6473ba0-ec40-4a41-83c1-c06a309fad4b)
+Socket disconnected: RdUHuALo0GUZH_ylAAAD (User: f65994de-7e61-4bad-ac38-7a2c66cf0bc2)
+Restarting 'src/index.ts'
+Connected to Redis successfully
+Connected to PostgreSQL database successfully via Prisma
+[Scheduler] Started: media cleanup (30s), subscription expiry (5min).
+Backend server running on port 4000
+User connected: 5eae643f-4564-4daf-95fc-f681d4491da7 (registered: false)
+User connected: bb2622b1-4913-4569-89ab-c3c41ad0d5e1 (registered: false)
+Socket disconnected: LAuejvmyVashj7e9AAAB (User: 5eae643f-4564-4daf-95fc-f681d4491da7)
+Socket disconnected: 7wlFc-7MbNvdYT93AAAD (User: bb2622b1-4913-4569-89ab-c3c41ad0d5e1)
+Restarting 'src/index.ts'
+Connected to Redis successfully
+Connected to PostgreSQL database successfully via Prisma
+[Scheduler] Started: media cleanup (30s), subscription expiry (5min).
+Backend server running on port 4000
+User connected: 31c9c822-13b9-4bd1-bc4e-6986019467aa (registered: false)
+User connected: 4c7bde0a-5674-4c97-81dc-1a720e66da72 (registered: false)
+[Socket] match:join event triggered for user: 31c9c822-13b9-4bd1-bc4e-6986019467aa, payload: {
+  interests: [ 'coding', 'music', 'sports' ],
+  language: 'en',
+  mediaType: 'text'
+}
+Socket disconnected: I9cOOt3yLYI_S-dQAAAB (User: 31c9c822-13b9-4bd1-bc4e-6986019467aa)
+Socket disconnected: CyrL1gkeGpaAnPERAAAD (User: 4c7bde0a-5674-4c97-81dc-1a720e66da72)
+User connected: 16a52a28-bb6d-4902-b8fa-4631776f921a (registered: false)
+User connected: 8b01e4ec-36f3-4117-b9a7-2d41704eb8f7 (registered: false)
+[Socket] match:join event triggered for user: 16a52a28-bb6d-4902-b8fa-4631776f921a, payload: {
+  interests: [ 'coding', 'music', 'sports' ],
+  language: 'en',
+  mediaType: 'text'
+}
+Socket disconnected: lE7tCHtt8BZljjj0AAAF (User: 16a52a28-bb6d-4902-b8fa-4631776f921a)
+Socket disconnected: UaT0FTkR_cw0d0rhAAAH (User: 8b01e4ec-36f3-4117-b9a7-2d41704eb8f7)
+User connected: 896853e4-31e9-4522-a02a-eaf06bd99cfd (registered: false)
+User connected: 1af3c49c-e2e4-4b40-987d-cbaa3e6bd991 (registered: false)
+[Socket] match:join event triggered for user: 896853e4-31e9-4522-a02a-eaf06bd99cfd, payload: {
+  interests: [ 'coding', 'music', 'sports' ],
+  language: 'en',
+  mediaType: 'text'
+}
+Socket disconnected: EeLLKpPAFf6IH0PvAAAJ (User: 896853e4-31e9-4522-a02a-eaf06bd99cfd)
+Socket disconnected: r0IA0ZgMqzNLgKTOAAAL (User: 1af3c49c-e2e4-4b40-987d-cbaa3e6bd991)
+User connected: 53bd2a06-3dee-40d2-9f0d-4b3caf6d8053 (registered: false)
+Restarting 'src/index.ts'
+Connected to Redis successfully
+Connected to PostgreSQL database successfully via Prisma
+[Scheduler] Started: media cleanup (30s), subscription expiry (5min).
+Backend server running on port 4000
+User connected: 53bd2a06-3dee-40d2-9f0d-4b3caf6d8053 (registered: false)
+[Socket] match:join event triggered for user: 53bd2a06-3dee-40d2-9f0d-4b3caf6d8053, payload: { interests: [ 'coding' ], language: 'en', mediaType: 'text' }
+Socket disconnected: DQXwVP54VcONIQoWAAAB (User: 53bd2a06-3dee-40d2-9f0d-4b3caf6d8053)
+User connected: e3c5dc92-e3bc-42e7-bd92-76f3c5950a9c (registered: false)
+[Socket] match:join event triggered for user: e3c5dc92-e3bc-42e7-bd92-76f3c5950a9c, payload: { interests: [ 'coding' ], language: 'en', mediaType: 'text' }
+Socket disconnected: VkILCsoBIbwSFIqGAAAD (User: e3c5dc92-e3bc-42e7-bd92-76f3c5950a9c)
+User connected: 7004382d-3f47-4ca1-b6cc-422a2c9e9167 (registered: false)
+User connected: 77333c29-8dbb-4a11-9802-50080e465e60 (registered: false)
+[Socket] match:join event triggered for user: 77333c29-8dbb-4a11-9802-50080e465e60, payload: {
+  interests: [ 'coding', 'music', 'sports' ],
+  language: 'en',
+  mediaType: 'text'
+}
+[Socket] match:join event triggered for user: 7004382d-3f47-4ca1-b6cc-422a2c9e9167, payload: {
+  interests: [ 'coding', 'music', 'sports' ],
+  language: 'en',
+  mediaType: 'text'
+}
+[Matchmaker] Comparing 7004382d-3f47-4ca1-b6cc-422a2c9e9167 and 77333c29-8dbb-4a11-9802-50080e465e60: score=77, threshold=40, match=true
+Auth upgraded for user 7004382d-3f47-4ca1-b6cc-422a2c9e9167: registrationType=EMAIL
+friend:request_in_chat triggered: {
+  userId: '7004382d-3f47-4ca1-b6cc-422a2c9e9167',
+  isRegistered: true,
+  dbRegistrationType: 'EMAIL',
+  isUserRegistered: true,
+  resolvedPeerUserId: '77333c29-8dbb-4a11-9802-50080e465e60',
+  resolvedRoomId: 'f89c6a7d-9214-4700-a448-115cbf0577cb',
+  hasSavedChat: true,
+  socketUser: {
+    userId: '7004382d-3f47-4ca1-b6cc-422a2c9e9167',
+    email: null,
+    registrationType: 'EMAIL',
+    isRegistered: true
+  }
+}
+Auth upgraded for user 77333c29-8dbb-4a11-9802-50080e465e60: registrationType=EMAIL
+[friend:accept_in_chat] check: {
+  requestId: 'f0e959a6-ee31-4b41-a438-f7706fa35e3d',
+  request_receiverId: '77333c29-8dbb-4a11-9802-50080e465e60',
+  user_userId: '77333c29-8dbb-4a11-9802-50080e465e60',
+  match: true
+}
+Socket disconnected: 5yBVV6PL_cC0OrUmAAAF (User: 7004382d-3f47-4ca1-b6cc-422a2c9e9167)
+Socket disconnected: qUdOwo-OM339IN9OAAAH (User: 77333c29-8dbb-4a11-9802-50080e465e60)
